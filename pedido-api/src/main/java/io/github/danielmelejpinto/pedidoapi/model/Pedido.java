@@ -7,6 +7,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.PrePersist;
 
 @Entity
 public class Pedido {
@@ -15,7 +16,6 @@ public class Pedido {
     private Long id; 
     private String name;
     private Double precio;
-    private String estado;
     private LocalDateTime fechaCreacion;
     
     public Long getId() {
@@ -36,17 +36,16 @@ public class Pedido {
     public void setPrecio(Double precio) {
         this.precio = precio;
     }
-    public String getEstado() {
-        return estado;
-    }
-    public void setEstado(String estado) {
-        this.estado = estado;
-    }
     public LocalDateTime getFechaCreacion() {
         return fechaCreacion;
     }
     public void setFechaCreacion(LocalDateTime fechaCreacion) {
         this.fechaCreacion = fechaCreacion;
     }
-    
+        // Importa esto arriba si no lo tienes: import jakarta.persistence.PrePersist;
+
+    @PrePersist
+    protected void alCrear() {
+        this.fechaCreacion = LocalDateTime.now();
+    }
 }
