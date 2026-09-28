@@ -3,8 +3,7 @@ services:
     image: postgres:17
     container_name: producto-db
     environment:
-      # Docker Compose lee estas variables del archivo .envls -la docker-compose.yml
-      
+      # Docker Compose lee estas variables del archivo .env
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
