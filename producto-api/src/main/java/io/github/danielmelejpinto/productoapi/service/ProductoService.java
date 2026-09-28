@@ -6,6 +6,7 @@ import org.springframework.http.HttpStatus;
 
 import io.github.danielmelejpinto.productoapi.model.Producto;
 import io.github.danielmelejpinto.productoapi.repository.ProductoRepository;
+import jakarta.transaction.Transactional;
 import io.github.danielmelejpinto.productoapi.dto.ProductoRequest;
 import io.github.danielmelejpinto.productoapi.dto.ProductoResponse;
 
@@ -13,6 +14,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
+@Transactional 
 public class ProductoService {
 
     private final ProductoRepository repository;
