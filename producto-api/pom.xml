@@ -58,11 +58,11 @@
 			<scope>runtime</scope>
 		</dependency>
 
-		<!-- H2 en memoria: SOLO para los tests, no viaja en la aplicación -->
+		<!-- H2 en memoria: para desarrollo local y tests -->
 		<dependency>
 			<groupId>com.h2database</groupId>
 			<artifactId>h2</artifactId>
-			<scope>test</scope>
+			<scope>runtime</scope>
 		</dependency>
 
 		<!-- Documentación automática: Swagger UI + OpenAPI -->
