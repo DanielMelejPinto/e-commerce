@@ -1,22 +1,23 @@
 package io.github.danielmelejpinto.productoapi.dto;
 
 import java.math.BigDecimal;
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
 
 public class ProductoRequest {
-    
-    // @NotBlank verifica que no venga nulo ni vacío (solo para textos)
+
     @NotBlank(message = "El nombre es obligatorio")
+    @Size(max = 150, message = "El nombre no puede superar 150 caracteres")
     private String nombre;
 
-    // @NotNull para números, y @Positive para que no pongan precios negativos o cero
     @NotNull(message = "El precio es obligatorio")
     @Positive(message = "El precio debe ser mayor a cero")
+    @Digits(integer = 10, fraction = 2, message = "El precio admite hasta 10 enteros y 2 decimales")
     private BigDecimal precio;
 
-    // Getters y Setters
     public String getNombre() {
         return nombre;
     }

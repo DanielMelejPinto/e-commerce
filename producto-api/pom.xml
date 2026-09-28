@@ -31,10 +31,17 @@
 			<artifactId>spring-boot-starter-web</artifactId>
 		</dependency>
 
-		<!-- Starter oficial para hacer tests (JUnit, MockMvc, etc) -->
+		<!-- Starter oficial para hacer tests (JUnit, etc) -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+
+		<!-- MockMvc para tests de controladores (separado en Spring Boot 4.x) -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-webmvc-test</artifactId>
 			<scope>test</scope>
 		</dependency>
 		
