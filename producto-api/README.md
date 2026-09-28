@@ -131,13 +131,6 @@ src/main/java/io/github/danielmelejpinto/productoapi/
 └── config/         # Configuración (OpenAPI/Swagger)
 ```
 
-## Próximos pasos
-
-- [ ] Integración continua con GitHub Actions
-- [ ] Dockerfile para empaquetar la aplicación
-- [ ] Despliegue público (demo en vivo)
-- [ ] Reporte de cobertura de tests
-
 ## Autor
 
 **Daniel Melej Pinto**

@@ -65,6 +65,13 @@
 			<scope>runtime</scope>
 		</dependency>
 
+		<!-- Generador de datos falsos para poblar la BD en desarrollo -->
+		<dependency>
+			<groupId>net.datafaker</groupId>
+			<artifactId>datafaker</artifactId>
+			<version>2.7.0</version>
+		</dependency>
+
 		<!-- Documentación automática: Swagger UI + OpenAPI -->
 		<dependency>
 			<groupId>org.springdoc</groupId>
