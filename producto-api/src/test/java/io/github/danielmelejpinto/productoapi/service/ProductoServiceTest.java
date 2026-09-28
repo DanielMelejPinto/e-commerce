@@ -25,6 +25,13 @@ import io.github.danielmelejpinto.productoapi.exception.ProductoNoEncontradoExce
 import io.github.danielmelejpinto.productoapi.model.Producto;
 import io.github.danielmelejpinto.productoapi.repository.ProductoRepository;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import io.github.danielmelejpinto.productoapi.exception.OrdenamientoInvalidoException;
+
 // MockitoExtension activa los mocks sin levantar Spring
 @ExtendWith(MockitoExtension.class)
 class ProductoServiceTest {
@@ -36,7 +43,7 @@ class ProductoServiceTest {
     private ProductoService service; // Mockito le pasa el mock al constructor
 
     // =============================================
-    //  Helpers
+    // Helpers
     // =============================================
 
     private Producto crearEntidad(Long id, String nombre, String precio) {
@@ -56,7 +63,7 @@ class ProductoServiceTest {
     }
 
     // =============================================
-    //  crear
+    // crear
     // =============================================
 
     @Test
@@ -85,31 +92,43 @@ class ProductoServiceTest {
     }
 
     // =============================================
-    //  obtenerTodos
+    // obtenerTodos
     // =============================================
 
     @Test
-    void obtenerTodos_conProductos_deberiaMapearTodosAResponse() {
-        when(repository.findAll()).thenReturn(List.of(
+    void obtenerTodos_conProductos_deberiaMapearLaPaginaAResponse() {
+        Pageable pageable = PageRequest.of(0, 10);
+        when(repository.findAll(pageable)).thenReturn(new PageImpl<>(List.of(
                 crearEntidad(1L, "Mouse", "25.00"),
-                crearEntidad(2L, "Teclado", "50.00")));
+                crearEntidad(2L, "Teclado", "50.00")), pageable, 2));
 
-        List<ProductoResponse> resultado = service.obtenerTodos();
+        Page<ProductoResponse> resultado = service.obtenerTodos(pageable);
 
-        assertThat(resultado).hasSize(2);
-        assertThat(resultado.get(0).getNombre()).isEqualTo("Mouse");
-        assertThat(resultado.get(1).getNombre()).isEqualTo("Teclado");
+        assertThat(resultado.getTotalElements()).isEqualTo(2);
+        assertThat(resultado.getContent()).hasSize(2);
+        assertThat(resultado.getContent().get(0).getNombre()).isEqualTo("Mouse");
+        assertThat(resultado.getContent().get(1).getNombre()).isEqualTo("Teclado");
     }
 
     @Test
-    void obtenerTodos_sinProductos_deberiaDevolverListaVacia() {
-        when(repository.findAll()).thenReturn(List.of());
+    void obtenerTodos_sinProductos_deberiaDevolverPaginaVacia() {
+        Pageable pageable = PageRequest.of(0, 10);
+        when(repository.findAll(pageable)).thenReturn(new PageImpl<>(List.of(), pageable, 0));
 
-        assertThat(service.obtenerTodos()).isEmpty();
+        assertThat(service.obtenerTodos(pageable).getContent()).isEmpty();
     }
 
+    @Test
+    void obtenerTodos_conCampoDeOrdenNoPermitido_deberiaLanzarExcepcionYNoConsultar() {
+        Pageable pageable = PageRequest.of(0, 10, Sort.by("campoInventado"));
+
+        assertThatThrownBy(() -> service.obtenerTodos(pageable))
+                .isInstanceOf(OrdenamientoInvalidoException.class)
+                .hasMessageContaining("campoInventado");
+        verify(repository, never()).findAll(any(Pageable.class));
+    }
     // =============================================
-    //  obtenerPorId
+    // obtenerPorId
     // =============================================
 
     @Test
@@ -133,7 +152,7 @@ class ProductoServiceTest {
     }
 
     // =============================================
-    //  actualizar
+    // actualizar
     // =============================================
 
     @Test
@@ -159,7 +178,7 @@ class ProductoServiceTest {
     }
 
     // =============================================
-    //  eliminar
+    // eliminar
     // =============================================
 
     @Test

@@ -28,7 +28,7 @@ class ProductoControllerTest {
     private MockMvc mockMvc;
 
     // =============================================
-    //  Helpers
+    // Helpers
     // =============================================
 
     // Arma el JSON de un producto para no repetir comillas escapadas
@@ -36,7 +36,8 @@ class ProductoControllerTest {
         return "{\"nombre\": \"" + nombre + "\", \"precio\": " + precio + "}";
     }
 
-    // Crea un producto vía API y devuelve la respuesta completa (para leer id y headers)
+    // Crea un producto vía API y devuelve la respuesta completa (para leer id y
+    // headers)
     private MvcResult crearYObtenerResultado(String nombre, String precio) throws Exception {
         return mockMvc.perform(post(URL)
                 .contentType(MediaType.APPLICATION_JSON)
@@ -57,7 +58,7 @@ class ProductoControllerTest {
     }
 
     // =============================================
-    //  POST /api/productos
+    // POST /api/productos
     // =============================================
 
     @Test
@@ -148,7 +149,8 @@ class ProductoControllerTest {
 
     @Test
     void crear_conMasDeDiezEnteros_deberiaRetornar400() throws Exception {
-        // 11 dígitos enteros: antes de @Digits esto provocaba un 500 en la base de datos
+        // 11 dígitos enteros: antes de @Digits esto provocaba un 500 en la base de
+        // datos
         mockMvc.perform(post(URL)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(cuerpo("Teclado", "12345678901")))
@@ -167,29 +169,68 @@ class ProductoControllerTest {
     }
 
     // =============================================
-    //  GET /api/productos
+    // GET /api/productos
     // =============================================
 
     @Test
-    void listarTodos_deberiaRetornar200ConArray() throws Exception {
-        // No asumimos que esté vacío: otros tests pueden haber creado productos
+    void listarTodos_deberiaRetornar200ConPaginaDeResultados() throws Exception {
         mockMvc.perform(get(URL))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$").isArray());
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.page.size").value(10))
+                .andExpect(jsonPath("$.page.number").value(0));
     }
 
     @Test
     void listarTodos_conProductosExistentes_deberiaIncluirElProductoCreado() throws Exception {
         crearProducto("Mouse", "25.00");
 
-        // Filtro por nombre: no depende de la posición ni de cuántos productos haya
-        mockMvc.perform(get(URL))
+        // sort=id,desc: el más reciente sale primero, así no depende de cuántos
+        // productos haya
+        mockMvc.perform(get(URL).param("sort", "id,desc"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[?(@.nombre == 'Mouse')]").exists());
+                .andExpect(jsonPath("$.content[?(@.nombre == 'Mouse')]").exists());
+    }
+
+    @Test
+    void listarTodos_conSizeDos_deberiaDevolverSoloDosElementos() throws Exception {
+        crearProducto("Pag1", "10.00");
+        crearProducto("Pag2", "10.00");
+        crearProducto("Pag3", "10.00");
+
+        mockMvc.perform(get(URL).param("page", "0").param("size", "2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(2))
+                .andExpect(jsonPath("$.page.size").value(2))
+                .andExpect(jsonPath("$.page.totalPages").isNumber());
+    }
+
+    @Test
+    void listarTodos_ordenadoPorPrecioDescendente_deberiaDevolverElMasCaroPrimero() throws Exception {
+        // 9999999999.99 es el precio máximo permitido: ningún otro test lo usa
+        crearProducto("MasCaro", "9999999999.99");
+
+        mockMvc.perform(get(URL).param("sort", "precio,desc").param("size", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].nombre").value("MasCaro"));
+    }
+
+    @Test
+    void listarTodos_conCampoDeOrdenInvalido_deberiaRetornar400() throws Exception {
+        mockMvc.perform(get(URL).param("sort", "campoInventado"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").exists());
+    }
+
+    @Test
+    void listarTodos_conSizeExcesivo_deberiaLimitarseAlMaximoPermitido() throws Exception {
+        mockMvc.perform(get(URL).param("size", "1000"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.page.size").value(50));
     }
 
     // =============================================
-    //  GET /api/productos/{id}
+    // GET /api/productos/{id}
     // =============================================
 
     @Test
@@ -218,7 +259,7 @@ class ProductoControllerTest {
     }
 
     // =============================================
-    //  PUT /api/productos/{id}
+    // PUT /api/productos/{id}
     // =============================================
 
     @Test
@@ -252,7 +293,7 @@ class ProductoControllerTest {
     }
 
     // =============================================
-    //  DELETE /api/productos/{id}
+    // DELETE /api/productos/{id}
     // =============================================
 
     @Test

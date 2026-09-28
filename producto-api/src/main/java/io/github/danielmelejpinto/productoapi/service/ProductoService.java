@@ -1,19 +1,26 @@
 package io.github.danielmelejpinto.productoapi.service;
 
+import java.util.List;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import io.github.danielmelejpinto.productoapi.dto.ProductoRequest;
 import io.github.danielmelejpinto.productoapi.dto.ProductoResponse;
+import io.github.danielmelejpinto.productoapi.exception.OrdenamientoInvalidoException;
 import io.github.danielmelejpinto.productoapi.exception.ProductoNoEncontradoException;
 import io.github.danielmelejpinto.productoapi.model.Producto;
 import io.github.danielmelejpinto.productoapi.repository.ProductoRepository;
 
-import java.util.List;
-
 @Service
 @Transactional(readOnly = true)
 public class ProductoService {
+
+    // Solo se permite ordenar por estos campos: no exponemos nada más de la entidad
+    private static final List<String> CAMPOS_ORDENABLES = List.of("id", "nombre", "precio", "fechaCreacion");
 
     private final ProductoRepository repository;
 
@@ -29,11 +36,9 @@ public class ProductoService {
         return mapearAResponse(repository.save(producto));
     }
 
-    public List<ProductoResponse> obtenerTodos() {
-        return repository.findAll()
-                .stream()
-                .map(this::mapearAResponse)
-                .toList();
+    public Page<ProductoResponse> obtenerTodos(Pageable pageable) {
+        validarOrdenamiento(pageable.getSort());
+        return repository.findAll(pageable).map(this::mapearAResponse);
     }
 
     public ProductoResponse obtenerPorId(Long id) {
@@ -56,6 +61,14 @@ public class ProductoService {
     }
 
     // --- Métodos privados de apoyo ---
+
+    private void validarOrdenamiento(Sort sort) {
+        for (Sort.Order orden : sort) {
+            if (!CAMPOS_ORDENABLES.contains(orden.getProperty())) {
+                throw new OrdenamientoInvalidoException(orden.getProperty(), CAMPOS_ORDENABLES);
+            }
+        }
+    }
 
     private Producto buscarEntidadPorId(Long id) {
         return repository.findById(id)

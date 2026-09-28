@@ -20,7 +20,7 @@ public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
-    // 1. Errores de validación de DTOs (aquí sí hay varios campos, por eso se usa HashMap)
+    // 1. Errores de validación de DTOs (varios campos, por eso se usa HashMap)
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, String>> manejarValidaciones(MethodArgumentNotValidException ex) {
         Map<String, String> errores = new HashMap<>();
@@ -50,11 +50,17 @@ public class GlobalExceptionHandler {
                 .body(Map.of("error", "El parámetro '" + ex.getName() + "' debe ser de tipo numérico"));
     }
 
-    // 5. Respaldo: cualquier error no previsto. Es el ÚNICO que devuelve 500.
+    // 5. Ordenamiento por un campo no permitido (ej. ?sort=campoInventado)
+    @ExceptionHandler(OrdenamientoInvalidoException.class)
+    public ResponseEntity<Map<String, String>> manejarOrdenamientoInvalido(OrdenamientoInvalidoException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", ex.getMessage()));
+    }
+
+    // 6. Respaldo: cualquier error no previsto. Es el ÚNICO que devuelve 500.
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, String>> manejarErrorInesperado(Exception ex) throws Exception {
         // Excepciones que Spring ya asocia a un código HTTP (404 de ruta inexistente,
-        // 405 de método no permitido, etc.): no las tocamos, siguen su camino normal
+        // 405 de método no permitido, etc.): no las tocamos
         if (ex instanceof ErrorResponse) {
             throw ex;
         }
