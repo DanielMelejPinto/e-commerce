@@ -45,8 +45,7 @@ public class ProductoController {
 
     // Spring arma el Pageable desde ?page=0&size=10&sort=precio,desc
     @GetMapping
-    @Operation(summary = "Listar productos con paginación y orden",
-            description = "Parámetros: page, size (máx. 50) y sort (id, nombre, precio, fechaCreacion). Ej: ?sort=precio,desc")
+    @Operation(summary = "Listar productos con paginación y orden", description = "Parámetros: page, size (máx. 50) y sort (id, nombre, precio, fechaCreacion). Ej: ?sort=precio,desc")
     @ApiResponse(responseCode = "200", description = "Página de productos")
     @ApiResponse(responseCode = "400", description = "Campo de orden no permitido")
     public ResponseEntity<PagedModel<ProductoResponse>> listarTodos(
@@ -69,7 +68,7 @@ public class ProductoController {
     @ApiResponse(responseCode = "400", description = "Datos inválidos")
     @ApiResponse(responseCode = "404", description = "El producto no existe")
     public ResponseEntity<ProductoResponse> actualizar(@PathVariable Long id,
-                                                       @Valid @RequestBody ProductoRequest request) {
+            @Valid @RequestBody ProductoRequest request) {
         return ResponseEntity.ok(service.actualizar(id, request));
     }
 
