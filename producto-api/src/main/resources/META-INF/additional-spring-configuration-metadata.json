@@ -8,13 +8,13 @@
     {
       "name": "inventario.api.connect-timeout-ms",
       "type": "java.lang.Integer",
-      "description": "Tiempo maximo de espera (en milisegundos) para establecer conexion con inventario-api.",
+      "description": "Tiempo máximo de espera (en milisegundos) para establecer conexión con inventario-api.",
       "defaultValue": 2000
     },
     {
       "name": "inventario.api.read-timeout-ms",
       "type": "java.lang.Integer",
-      "description": "Tiempo maximo de espera (en milisegundos) para leer la respuesta de inventario-api.",
+      "description": "Tiempo máximo de espera (en milisegundos) para leer la respuesta de inventario-api.",
       "defaultValue": 5000
     }
   ]

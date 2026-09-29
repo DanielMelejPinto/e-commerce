@@ -1,5 +1,6 @@
 package io.github.danielmelejpinto.productoapi.service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.data.domain.Page;
@@ -13,22 +14,19 @@ import io.github.danielmelejpinto.productoapi.dto.ProductoRequest;
 import io.github.danielmelejpinto.productoapi.dto.ProductoResponse;
 import io.github.danielmelejpinto.productoapi.exception.OrdenamientoInvalidoException;
 import io.github.danielmelejpinto.productoapi.exception.ProductoNoEncontradoException;
-import io.github.danielmelejpinto.productoapi.model.EstadoProducto;
-import io.github.danielmelejpinto.productoapi.model.Producto;
-import java.time.LocalDateTime;
-import io.github.danielmelejpinto.productoapi.model.OutboxEvent;
-import io.github.danielmelejpinto.productoapi.model.TipoEvento;
 import io.github.danielmelejpinto.productoapi.model.EstadoEvento;
-import io.github.danielmelejpinto.productoapi.repository.ProductoRepository;
+import io.github.danielmelejpinto.productoapi.model.EstadoProducto;
+import io.github.danielmelejpinto.productoapi.model.OutboxEvent;
+import io.github.danielmelejpinto.productoapi.model.Producto;
+import io.github.danielmelejpinto.productoapi.model.TipoEvento;
 import io.github.danielmelejpinto.productoapi.repository.OutboxEventRepository;
+import io.github.danielmelejpinto.productoapi.repository.ProductoRepository;
 
 @Service
 @Transactional(readOnly = true)
 public class ProductoService {
 
     private static final String ID_FIELD = "id";
-
-
     private static final List<String> CAMPOS_ORDENABLES = List.of("id", "nombre", "precio", "fechaCreacion");
 
     private final ProductoRepository repository;
@@ -62,7 +60,6 @@ public class ProductoService {
     public Page<ProductoResponse> obtenerTodos(Pageable pageable) {
         validarOrdenamiento(pageable.getSort());
         
-        // Agregar "id" como desempate para paginación estable si no está presente como criterio único principal (siempre lo anexamos)
         Sort sort = pageable.getSort().and(Sort.by(ID_FIELD));
         Pageable pageableConId = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
         
@@ -78,7 +75,6 @@ public class ProductoService {
         Producto producto = buscarEntidadPorId(id);
         producto.setNombre(request.nombre());
         producto.setPrecio(request.precio());
-        // No hace falta repository.save(): la entidad está gestionada por JPA
         return mapearAResponse(producto);
     }
 
@@ -87,8 +83,6 @@ public class ProductoService {
         Producto producto = buscarEntidadPorId(id);
         producto.setEstado(EstadoProducto.BAJA);
     }
-
-    // --- Métodos privados de apoyo ---
 
     private void validarOrdenamiento(Sort sort) {
         for (Sort.Order orden : sort) {
