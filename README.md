@@ -1,13 +1,16 @@
 # E-Commerce · Productos e Inventario
 
-[![CI](https://github.com/DanielMelejPinto/e-commerce/actions/workflows/ci.yml/badge.svg)](https://github.com/DanielMelejPinto/e-commerce/actions/workflows/ci.yml)
+[![CI](https://github.com/DanielMelejPinto/e-commerce/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/DanielMelejPinto/e-commerce/actions/workflows/ci.yml)
 
 Sistema backend de e-commerce que gestiona catálogo de productos y existencias de inventario.
 Construido con **Java 21 y Spring Boot 4.1.1**, separado en dos microservicios (`producto-api` e `inventario-api`).
+
 Características principales:
+
 - **Transactional Outbox**: garantiza la coordinación entre ambos servicios.
 - **Concurrencia optimista**: previene pérdida de actualizaciones usando `@Version`.
 - **Reserva atómica**: operaciones seguras de stock en base de datos.
+
 Para ejecutarlo localmente, utiliza `./mvnw spring-boot:run` en las carpetas de cada módulo.
 
 **Estado:** proyecto de práctica en desarrollo. El alcance actual comprende catálogo e inventario.
