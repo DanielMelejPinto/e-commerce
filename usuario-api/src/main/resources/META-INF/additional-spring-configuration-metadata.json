@@ -1,0 +1,10 @@
+{
+  "properties": [
+    {
+      "name": "seguridad.bcrypt-cost",
+      "type": "java.lang.Integer",
+      "description": "Costo de BCrypt (4 a 31). Cada +1 duplica el tiempo de hash.",
+      "defaultValue": 12
+    }
+  ]
+}

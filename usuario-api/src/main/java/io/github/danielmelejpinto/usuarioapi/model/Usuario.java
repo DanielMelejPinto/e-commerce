@@ -52,9 +52,13 @@ public class Usuario {
 
     public String getEmail() { return email; }
 
-    public void setEmail(String email) {
+    public static String normalizarEmail(String email) {
         // Locale.ROOT evita sorpresas con idiomas como el turco (I -> ı)
-        this.email = email == null ? null : email.trim().toLowerCase(Locale.ROOT);
+        return email == null ? null : email.trim().toLowerCase(Locale.ROOT);
+    }
+
+    public void setEmail(String email) {
+        this.email = normalizarEmail(email);
     }
 
     public String getPasswordHash() { return passwordHash; }
