@@ -1,8 +1,6 @@
 package io.github.danielmelejpinto.productoapi.controller;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -23,10 +21,7 @@ import org.springframework.test.web.servlet.MvcResult;
 
 import com.jayway.jsonpath.JsonPath;
 import io.github.danielmelejpinto.productoapi.client.InventarioClient;
-import io.github.danielmelejpinto.productoapi.exception.InventarioNoDisponibleException;
-import io.github.danielmelejpinto.productoapi.model.EstadoProducto;
-import io.github.danielmelejpinto.productoapi.model.Producto;
-import io.github.danielmelejpinto.productoapi.repository.ProductoRepository;
+import io.github.danielmelejpinto.productoapi.service.OutboxProcessor;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -39,12 +34,31 @@ class ProductoControllerTest {
     private MockMvc mockMvc;
 
     @Autowired
-    private ProductoRepository repository;
-
     // Sustituye al InventarioClient real: los tests no dependen de que inventario-api
     // esté corriendo
     @MockitoBean
     private InventarioClient inventarioClient;
+    @Autowired
+    private OutboxProcessor outboxProcessor;
+
+
+    @Test
+    void crear_productoPendienteNoApareceEnListadoHastaProcesarOutbox() throws Exception {
+        crearYObtenerResultado("NuevoProd", "100.00");
+        
+        // No debe aparecer porque esta PENDIENTE
+        mockMvc.perform(get(URL).param("sort", "id,desc"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[?(@.nombre == 'NuevoProd')]").doesNotExist());
+                
+        // Procesamos
+        outboxProcessor.procesarEventosPendientes();
+        
+        // Ahora si
+        mockMvc.perform(get(URL).param("sort", "id,desc"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[?(@.nombre == 'NuevoProd')]").exists());
+    }
 
     // =============================================
     // Helpers
@@ -74,9 +88,7 @@ class ProductoControllerTest {
     // Crea un producto y devuelve solo su id: así ningún test depende de "ID 1"
     private long crearProducto(String nombre, String precio) throws Exception {
         long id = leerId(crearYObtenerResultado(nombre, precio));
-        Producto p = repository.findById(id).orElseThrow();
-        p.setEstado(EstadoProducto.ACTIVO);
-        repository.save(p);
+        outboxProcessor.procesarEventosPendientes();
         return id;
     }
 
@@ -105,21 +117,6 @@ class ProductoControllerTest {
         assertEquals("http://localhost" + URL + "/" + id, location);
     }
 
-    @Test
-    void crear_cuandoInventarioNoResponde_deberiaRetornar503YNoGuardarElProducto() throws Exception {
-        doThrow(new InventarioNoDisponibleException("timeout", null))
-                .when(inventarioClient).inicializarInventario(any());
-
-        mockMvc.perform(post(URL)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(cuerpo("Fantasma", "10.00")))
-                .andExpect(status().isServiceUnavailable())
-                .andExpect(jsonPath("$.error").value("Servicio de inventario no disponible, intenta más tarde"));
-
-        mockMvc.perform(get(URL).param("sort", "id,desc").param("size", "50"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content[?(@.nombre == 'Fantasma')]").isEmpty());
-    }
 
     @Test
     void crear_conNombreVacio_deberiaRetornar400() throws Exception {
@@ -359,4 +356,35 @@ class ProductoControllerTest {
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error").value("Producto con id 999999 no existe"));
     }
+
+    @Test
+    void listarTodos_noDebeIncluirProductosEnBaja() throws Exception {
+        long id = crearProducto("ParaBorrar", "10.00");
+        mockMvc.perform(delete(URL + "/" + id)).andExpect(status().isNoContent());
+        
+        mockMvc.perform(get(URL))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[?(@.nombre == 'ParaBorrar')]").doesNotExist());
+    }
+
+    @Test
+    void obtenerPorId_conProductoEnBaja_deberiaRetornar404() throws Exception {
+        long id = crearProducto("ParaBorrar2", "10.00");
+        mockMvc.perform(delete(URL + "/" + id)).andExpect(status().isNoContent());
+        
+        mockMvc.perform(get(URL + "/" + id))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void actualizar_conProductoEnBaja_deberiaRetornar404() throws Exception {
+        long id = crearProducto("ParaBorrar3", "10.00");
+        mockMvc.perform(delete(URL + "/" + id)).andExpect(status().isNoContent());
+        
+        mockMvc.perform(put(URL + "/" + id)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(cuerpo("Actualizado", "20.00")))
+                .andExpect(status().isNotFound());
+    }
+
 }

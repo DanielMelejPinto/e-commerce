@@ -76,6 +76,8 @@ En este perfil la base arranca vacía (sin datos de prueba) y los datos persiste
 |---|---|---|
 | `server.port` | `8080` | Puerto de la API |
 | `inventario.api.url` (env: `INVENTARIO_API_URL`) | `http://localhost:8081` | URL base de `inventario-api` |
+| `inventario.api.connect-timeout-ms` | `2000` | Timeout de conexión a inventario-api (ms) |
+| `inventario.api.read-timeout-ms` | `5000` | Timeout de lectura a inventario-api (ms) |
 | `spring.data.web.pageable.max-page-size` | `50` | Tamaño máximo de página (si piden más, se recorta) |
 | `POSTGRES_HOST` | `localhost` | Host de PostgreSQL (perfil `docker`) |
 | `POSTGRES_DB` | `productodb` | Base de datos (perfil `docker`) |
@@ -123,21 +125,22 @@ Respuesta (`201 Created`, con header `Location` apuntando al nuevo recurso):
 }
 ```
 
-## Integración con inventario-api
+## Integración con inventario-api (Patrón Outbox)
 
-Al crear o eliminar un producto, `producto-api` llama a:
+Al crear un producto, `producto-api` debe notificar a `inventario-api` para que inicialice el stock (POST a `/api/inventarios/producto/{id}`). Para evitar problemas de transacciones distribuidas y bloqueos si `inventario-api` está lento o caído, se implementó el **Patrón Outbox**:
 
-```
-POST {inventario.api.url}/api/inventarios/producto/{id}
-DELETE {inventario.api.url}/api/inventarios/producto/{id}
-```
+1. Al crear el producto, se guarda en la base de datos local con estado `PENDIENTE` junto con un evento de creación en la tabla `outbox_events` (misma transacción local).
+2. Un proceso en segundo plano (job planificado) lee periódicamente los eventos pendientes.
+3. El proceso llama a `inventario-api`.
+   - Si tiene éxito, marca el evento como `ENVIADO` y el producto cambia a estado `ACTIVO`.
+   - Si falla temporalmente (error de red o 5xx), reintenta en la siguiente ejecución.
+   - Si el inventario rechaza definitivamente la petición (4xx), el producto cambia a estado `BAJA`.
 
-para que `inventario-api` cree el inventario del nuevo producto (con stock en cero) o lo elimine. Detalles a tener en cuenta:
+**Notas de negocio:**
+- Un producto en estado `PENDIENTE` o `BAJA` **no** aparece en el listado (`GET /api/productos`).
+- El borrado de un producto (`DELETE`) ahora es un **borrado lógico** (cambia a `BAJA`), para no romper la integridad referencial de futuros pedidos.
 
-- La llamada ocurre **dentro de la misma transacción** que el guardado o borrado. Si `inventario-api` no responde o falla, se devuelve `503` y la operación **se revierte** (rollback).
-- Los timeouts son de 2 s para conectar y 5 s para leer la respuesta.
-- Para probar solo los `GET` y `PUT` no hace falta tener `inventario-api` levantado. Para crear o eliminar productos sí.
-- `inventario-api` vive en la carpeta hermana `inventario-api/` de este repositorio y corre en el puerto 8081.
+Los timeouts son configurables y evitan colapsar el sistema si la red está lenta.
 
 ## Manejo de errores
 
@@ -163,7 +166,6 @@ El resto usa la forma `{"error": "..."}`. Por ejemplo, al pedir un producto que 
 | `400` | Datos inválidos, JSON mal formado, id no numérico o `sort` por un campo no permitido |
 | `404` | El producto no existe |
 | `409` | Dos operaciones modificaron el mismo producto a la vez (`@Version`); reintenta |
-| `503` | `inventario-api` no responde. Si ocurre al crear, el producto no se guarda |
 | `500` | Error inesperado. El detalle va al log del servidor, nunca al cliente |
 
 ## Correr los tests
@@ -176,9 +178,11 @@ Los tests usan el perfil `test`: H2 en memoria y **vacía** (sin datos de prueba
 
 | Clase | Qué cubre | Tests |
 |---|---|---|
-| `ProductoControllerTest` | Endpoints, validaciones, paginación, orden, `Location` y `503` cuando inventario no responde | 27 |
-| `ProductoServiceTest` | Lógica de negocio con repositorio simulado | 11 |
+| `ProductoControllerTest` | Endpoints, validaciones, paginación, orden y ciclo de vida de PENDIENTE a ACTIVO/BAJA | 30 |
+| `ProductoServiceTest` | Lógica de negocio con repositorio simulado | 14 |
 | `GlobalExceptionHandlerTest` | Respuesta `409` ante conflicto de concurrencia | 1 |
+| `InventarioClientTest` | Timeout y mapeo de excepciones del RestClient | 4 |
+| `OutboxProcessorTest` | Lógica de reintentos y actualización de estados | 4 |
 | `DocumentacionApiTest` | Que el OpenAPI se genere y describa los endpoints | 1 |
 | `ProductoApiApplicationTests` | Que el contexto de Spring arranque | 1 |
 

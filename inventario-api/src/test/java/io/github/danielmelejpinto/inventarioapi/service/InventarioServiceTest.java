@@ -22,9 +22,38 @@ import io.github.danielmelejpinto.inventarioapi.exception.InventarioNoEncontrado
 import io.github.danielmelejpinto.inventarioapi.exception.StockInsuficienteException;
 import io.github.danielmelejpinto.inventarioapi.model.Inventario;
 import io.github.danielmelejpinto.inventarioapi.repository.InventarioRepository;
+import org.springframework.dao.DataIntegrityViolationException;
 
 @ExtendWith(MockitoExtension.class)
 class InventarioServiceTest {
+    @Test
+    void inicializarInventario_cuandoColisionaConConcurrencia_deberiaDevolverExistenteYNoPropagarExcepcion() {
+        Long productoId = 99L;
+        Inventario existente = new Inventario();
+        existente.setProductoId(productoId);
+        existente.setCantidadDisponible(0L);
+        existente.setCantidadReservada(0L);
+
+        // La primera vez devuelve vacío, intentamos guardar y da error de integridad,
+        // luego vuelve a buscar y encuentra el que insertó el otro hilo.
+        when(repository.findByProductoId(productoId))
+                .thenReturn(Optional.empty())
+                .thenReturn(Optional.of(existente));
+                
+        when(repository.save(any(Inventario.class)))
+                .thenThrow(new org.springframework.dao.DataIntegrityViolationException("Colisión simulada"));
+
+        ResultadoInicializacion resultado = service.inicializarInventario(productoId);
+
+        assertThat(resultado.inventario().productoId()).isEqualTo(existente.getProductoId());
+        assertThat(resultado.creado()).isFalse();
+        
+        // Verificamos que guardó
+        verify(repository).save(any(Inventario.class));
+        // Verificamos que buscó 2 veces
+        verify(repository, org.mockito.Mockito.times(2)).findByProductoId(productoId);
+    }
+
 
     @Mock
     private InventarioRepository repository;
@@ -83,7 +112,7 @@ class InventarioServiceTest {
         inventario.setProductoId(productoId);
         inventario.setCantidadDisponible(10L);
         inventario.setCantidadReservada(5L);
-        
+
         when(repository.findByProductoId(productoId)).thenReturn(Optional.of(inventario));
 
         ResultadoInicializacion resultado = service.inicializarInventario(productoId);
@@ -92,6 +121,27 @@ class InventarioServiceTest {
         assertThat(resultado.creado()).isFalse();
         assertThat(response.cantidadDisponible()).isEqualTo(10L);
         verify(repository, never()).save(any(Inventario.class));
+    }
+
+    @Test
+    void inicializarInventario_conColision_deberiaRecuperarYRetornarExistente() {
+        Long productoId = 1L;
+        Inventario inventarioExistente = new Inventario();
+        inventarioExistente.setProductoId(productoId);
+        inventarioExistente.setCantidadDisponible(20L);
+
+        when(repository.findByProductoId(productoId))
+                .thenReturn(Optional.empty())
+                .thenReturn(Optional.of(inventarioExistente));
+
+        when(repository.save(any(Inventario.class)))
+                .thenThrow(new DataIntegrityViolationException("Colisión"));
+
+        ResultadoInicializacion resultado = service.inicializarInventario(productoId);
+
+        assertThat(resultado.creado()).isFalse();
+        assertThat(resultado.inventario().cantidadDisponible()).isEqualTo(20L);
+        verify(repository).save(any(Inventario.class));
     }
 
     @Test
@@ -123,9 +173,10 @@ class InventarioServiceTest {
         Long productoId = 1L;
         Inventario inventario = new Inventario();
         inventario.setProductoId(productoId);
-        inventario.setCantidadDisponible(10L);
-        inventario.setCantidadReservada(0L);
+        inventario.setCantidadDisponible(5L);
+        inventario.setCantidadReservada(5L);
 
+        when(repository.reservarStockAtomico(productoId, 5)).thenReturn(1);
         when(repository.findByProductoId(productoId)).thenReturn(Optional.of(inventario));
 
         InventarioResponse response = service.reservarStock(productoId, 5);
@@ -133,15 +184,16 @@ class InventarioServiceTest {
         assertThat(response.cantidadDisponible()).isEqualTo(5L);
         assertThat(response.cantidadReservada()).isEqualTo(5L);
     }
-    
+
     @Test
     void reservarStock_conStockExacto_deberiaPermitirReserva() {
         Long productoId = 1L;
         Inventario inventario = new Inventario();
         inventario.setProductoId(productoId);
-        inventario.setCantidadDisponible(10L);
-        inventario.setCantidadReservada(0L);
+        inventario.setCantidadDisponible(0L);
+        inventario.setCantidadReservada(10L);
 
+        when(repository.reservarStockAtomico(productoId, 10)).thenReturn(1);
         when(repository.findByProductoId(productoId)).thenReturn(Optional.of(inventario));
 
         InventarioResponse response = service.reservarStock(productoId, 10);
@@ -158,43 +210,43 @@ class InventarioServiceTest {
         inventario.setCantidadDisponible(5L);
         inventario.setCantidadReservada(0L);
 
+        when(repository.reservarStockAtomico(productoId, 10)).thenReturn(0);
         when(repository.findByProductoId(productoId)).thenReturn(Optional.of(inventario));
 
         assertThatThrownBy(() -> service.reservarStock(productoId, 10))
                 .isInstanceOf(StockInsuficienteException.class)
                 .hasMessageContaining("disponible 5, solicitado 10");
-
-        assertThat(inventario.getCantidadDisponible()).isEqualTo(5L);
     }
-    
+
     @Test
     void reservarStock_conIdInexistente_deberiaLanzarExcepcion() {
         Long productoId = 1L;
+        when(repository.reservarStockAtomico(productoId, 5)).thenReturn(0);
         when(repository.findByProductoId(productoId)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.reservarStock(productoId, 5))
                 .isInstanceOf(InventarioNoEncontradoException.class);
     }
-    
+
     @Test
     void eliminarInventario_cuandoExiste_deberiaBorrarlo() {
         Long productoId = 1L;
         Inventario inventario = new Inventario();
         inventario.setProductoId(productoId);
         when(repository.findByProductoId(productoId)).thenReturn(Optional.of(inventario));
-        
+
         service.eliminarInventario(productoId);
-        
+
         verify(repository).delete(inventario);
     }
-    
+
     @Test
     void eliminarInventario_cuandoNoExiste_noDeberiaHacerNada() {
         Long productoId = 1L;
         when(repository.findByProductoId(productoId)).thenReturn(Optional.empty());
-        
+
         service.eliminarInventario(productoId);
-        
+
         verify(repository, never()).delete(any(Inventario.class));
     }
 }

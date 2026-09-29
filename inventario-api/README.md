@@ -48,10 +48,11 @@ El estado de salud del servicio se puede consultar en `http://localhost:8081/act
 | Método   | Ruta                                              | Descripción                             | Respuestas                  |
 |----------|---------------------------------------------------|-----------------------------------------|-----------------------------|
 | `GET`    | `/api/inventarios/producto/{productoId}`          | Consultar el inventario de un producto  | `200`, `400`, `404`         |
-| `POST`   | `/api/inventarios/producto/{productoId}`          | Inicializar el inventario (idempotente) | `201`, `409`                |
-| `PUT`    | `/api/inventarios/producto/{productoId}/agregar`  | Agregar stock                           | `200`, `400`, `404`, `409`  |
-| `PUT`    | `/api/inventarios/producto/{productoId}/reservar` | Reservar stock                          | `200`, `400`, `404`, `409`  |
-| `DELETE` | `/api/inventarios/producto/{productoId}`          | Eliminar el inventario (idempotente)    | `204`                       |
+| `POST`   | `/api/inventarios/producto/{id}` | Inicializa stock en 0 para un producto | `200` (existente), `201` (creado) |
+| `GET`    | `/api/inventarios/producto/{id}` | Consulta el stock disponible y reservado | `200`, `404` |
+| `PUT`    | `/api/inventarios/producto/{id}/agregar` | Suma una cantidad al stock disponible | `200`, `400`, `404` |
+| `PUT`    | `/api/inventarios/producto/{id}/reservar` | Mueve stock disponible a reservado | `200`, `400`, `404`, `409` |
+| `DELETE` | `/api/inventarios/producto/{id}` | Elimina el inventario de un producto | `204` | `/api/inventarios/producto/{productoId}`          | Eliminar el inventario (idempotente)    | `204`                       |
 
 **Validaciones** de `agregar` y `reservar`: `cantidad` obligatoria, mayor a cero y como máximo `100000` por operación.
 
@@ -107,17 +108,9 @@ El resto usa la forma `{"error": "..."}`:
 ./mvnw test
 ```
 
-Requiere **Docker corriendo**. A diferencia de `producto-api`, el test de contexto usa Testcontainers (PostgreSQL 17); el resto de los tests usan el perfil `test` con H2 en memoria y no necesitan Docker por sí mismos.
-
-| Clase | Qué cubre | Tests |
-|---|---|---|
-| `InventarioControllerTest` | Endpoints, validaciones, idempotencia, reservas y una prueba de concurrencia (dos reservas simultáneas sobre stock 1) | 14 |
-| `InventarioServiceTest` | Lógica de negocio con repositorio simulado | 12 |
-| `GlobalExceptionHandlerTest` | Respuestas `409` ante conflicto de concurrencia y de integridad | 2 |
-| `DocumentacionApiTest` | Que el OpenAPI se genere y describa los endpoints | 1 |
-| `InventarioApiApplicationTests` | Que el contexto de Spring arranque contra PostgreSQL (Testcontainers) | 1 |
-
-> Los tests de concurrencia corren sobre H2; su comportamiento de bloqueo no es idéntico al de PostgreSQL.
+Los tests de integración (`InventarioControllerTest`, `InventarioApiApplicationTests`) se ejecutan **obligatoriamente con PostgreSQL usando Testcontainers** (el contenedor se comparte entre todos los tests).
+Requiere tener Docker levantado localmente. Si no tienes Docker, estos tests se saltarán de forma segura gracias a la anotación `@Testcontainers(disabledWithoutDocker = true)`. 
+`DocumentacionApiTest` utiliza H2 en memoria, y `InventarioServiceTest` son pruebas unitarias (Mockito) sin levantar contexto.
 
 ## Estructura del proyecto
 

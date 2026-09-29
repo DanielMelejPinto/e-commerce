@@ -9,14 +9,18 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import io.github.danielmelejpinto.productoapi.client.InventarioClient;
 import io.github.danielmelejpinto.productoapi.dto.ProductoRequest;
 import io.github.danielmelejpinto.productoapi.dto.ProductoResponse;
 import io.github.danielmelejpinto.productoapi.exception.OrdenamientoInvalidoException;
 import io.github.danielmelejpinto.productoapi.exception.ProductoNoEncontradoException;
 import io.github.danielmelejpinto.productoapi.model.EstadoProducto;
 import io.github.danielmelejpinto.productoapi.model.Producto;
+import java.time.LocalDateTime;
+import io.github.danielmelejpinto.productoapi.model.OutboxEvent;
+import io.github.danielmelejpinto.productoapi.model.TipoEvento;
+import io.github.danielmelejpinto.productoapi.model.EstadoEvento;
 import io.github.danielmelejpinto.productoapi.repository.ProductoRepository;
+import io.github.danielmelejpinto.productoapi.repository.OutboxEventRepository;
 
 @Service
 @Transactional(readOnly = true)
@@ -25,11 +29,11 @@ public class ProductoService {
     private static final List<String> CAMPOS_ORDENABLES = List.of("id", "nombre", "precio", "fechaCreacion");
 
     private final ProductoRepository repository;
-    private final InventarioClient inventarioClient;
+    private final OutboxEventRepository outboxEventRepository;
 
-    public ProductoService(ProductoRepository repository, InventarioClient inventarioClient) {
+    public ProductoService(ProductoRepository repository, OutboxEventRepository outboxEventRepository) {
         this.repository = repository;
-        this.inventarioClient = inventarioClient;
+        this.outboxEventRepository = outboxEventRepository;
     }
 
     @Transactional
@@ -41,8 +45,13 @@ public class ProductoService {
 
         Producto productoGuardado = repository.save(producto);
 
-        // Avisa a inventario-api para que cree el inventario del nuevo producto
-        inventarioClient.inicializarInventario(productoGuardado.getId());
+        OutboxEvent event = new OutboxEvent();
+        event.setProductoId(productoGuardado.getId());
+        event.setTipoEvento(TipoEvento.CREACION);
+        event.setEstado(EstadoEvento.PENDIENTE);
+        event.setFechaCreacion(LocalDateTime.now());
+        event.setIntentos(0);
+        outboxEventRepository.save(event);
 
         return mapearAResponse(productoGuardado);
     }

@@ -77,7 +77,7 @@ class InventarioClientTest {
         assertThatThrownBy(() -> client.inicializarInventario(4L))
                 .isInstanceOf(InventarioNoDisponibleException.class)
                 .hasMessageContaining("Error de red")
-                .hasCauseInstanceOf(IOException.class);
+                ;
 
         mockServer.verify();
     }

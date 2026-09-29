@@ -25,12 +25,15 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 
-import io.github.danielmelejpinto.productoapi.client.InventarioClient;
+import io.github.danielmelejpinto.productoapi.repository.OutboxEventRepository;
 import io.github.danielmelejpinto.productoapi.dto.ProductoRequest;
 import io.github.danielmelejpinto.productoapi.dto.ProductoResponse;
 import io.github.danielmelejpinto.productoapi.exception.OrdenamientoInvalidoException;
 import io.github.danielmelejpinto.productoapi.exception.ProductoNoEncontradoException;
 import io.github.danielmelejpinto.productoapi.model.EstadoProducto;
+import io.github.danielmelejpinto.productoapi.model.OutboxEvent;
+import io.github.danielmelejpinto.productoapi.model.EstadoEvento;
+import io.github.danielmelejpinto.productoapi.model.TipoEvento;
 import io.github.danielmelejpinto.productoapi.model.Producto;
 import io.github.danielmelejpinto.productoapi.repository.ProductoRepository;
 
@@ -42,13 +45,13 @@ class ProductoServiceTest {
     private ProductoRepository repository;
 
     @Mock
-    private InventarioClient inventarioClient;
+    private OutboxEventRepository outboxEventRepository;
 
     private ProductoService service;
 
     @BeforeEach
     void setUp() {
-        service = new ProductoService(repository, inventarioClient);
+        service = new ProductoService(repository, outboxEventRepository);
     }
 
     // =============================================
@@ -105,7 +108,7 @@ class ProductoServiceTest {
     }
 
     @Test
-    void crear_deberiaAvisarAInventarioConLaUrlDelNuevoProducto() {
+    void crear_deberiaGuardarEventoEnOutbox() {
         when(repository.save(any(Producto.class))).thenAnswer(invocacion -> {
             Producto p = invocacion.getArgument(0);
             p.setId(7L);
@@ -115,7 +118,11 @@ class ProductoServiceTest {
 
         service.crear(crearRequest("Teclado", "50.00"));
 
-        verify(inventarioClient).inicializarInventario(7L);
+        ArgumentCaptor<OutboxEvent> captor = ArgumentCaptor.forClass(OutboxEvent.class);
+        verify(outboxEventRepository).save(captor.capture());
+        assertThat(captor.getValue().getProductoId()).isEqualTo(7L);
+        assertThat(captor.getValue().getEstado()).isEqualTo(EstadoEvento.PENDIENTE);
+        assertThat(captor.getValue().getTipoEvento()).isEqualTo(TipoEvento.CREACION);
     }
 
     // =============================================

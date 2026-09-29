@@ -10,10 +10,13 @@ import org.springframework.web.client.RestClient;
 public class RestClientConfig {
 
     @Bean
-    public RestClient restClient(@Value("${inventario.api.url}") String inventarioUrl) {
+    public RestClient restClient(
+            @Value("${inventario.api.url}") String inventarioUrl,
+            @Value("${inventario.api.connect-timeout-ms:2000}") int connectTimeout,
+            @Value("${inventario.api.read-timeout-ms:5000}") int readTimeout) {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(2000);
-        factory.setReadTimeout(5000);
+        factory.setConnectTimeout(connectTimeout);
+        factory.setReadTimeout(readTimeout);
         
         return RestClient.builder()
                 .baseUrl(inventarioUrl)

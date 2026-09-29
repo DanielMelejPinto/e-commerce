@@ -3,8 +3,19 @@
     {
       "name": "inventario.api.url",
       "type": "java.lang.String",
-      "description": "URL base de inventario-api (al crear un producto se le pide crear su inventario).",
-      "defaultValue": "http://localhost:8081"
+      "description": "URL base del microservicio inventario-api."
+    },
+    {
+      "name": "inventario.api.connect-timeout-ms",
+      "type": "java.lang.Integer",
+      "description": "Tiempo maximo de espera (en milisegundos) para establecer conexion con inventario-api.",
+      "defaultValue": 2000
+    },
+    {
+      "name": "inventario.api.read-timeout-ms",
+      "type": "java.lang.Integer",
+      "description": "Tiempo maximo de espera (en milisegundos) para leer la respuesta de inventario-api.",
+      "defaultValue": 5000
     }
   ]
 }

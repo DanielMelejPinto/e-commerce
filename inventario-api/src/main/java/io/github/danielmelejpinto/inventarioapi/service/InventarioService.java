@@ -31,6 +31,8 @@ public class InventarioService {
     // Se usa Propagation.NEVER para que la excepción de unicidad (DataIntegrityViolationException)
     // que ocurre en repository.save no marque la transacción externa como rollback-only.
     // El repositorio en sí mismo maneja sus propias transacciones internas para cada método.
+    // IMPORTANTE: Este método no debe llamarse dentro de otra transacción para poder atrapar la DataIntegrityViolationException correctamente.
+    // propagation = NEVER indica que este método no puede llamarse desde dentro de otra transacción, para que la captura del DataIntegrityViolationException funcione correctamente y aislarlo de la Tx superior.
     @Transactional(propagation = Propagation.NEVER)
     public ResultadoInicializacion inicializarInventario(Long productoId) {
         return repository.findByProductoId(productoId)
@@ -61,16 +63,13 @@ public class InventarioService {
 
     @Transactional
     public InventarioResponse reservarStock(Long productoId, int cantidad) {
-        Inventario inventario = buscar(productoId);
-
-        if (inventario.getCantidadDisponible() < cantidad) {
+        int filasActualizadas = repository.reservarStockAtomico(productoId, cantidad);
+        if (filasActualizadas == 0) {
+            // No se actualizó: o no existe o no hay stock
+            Inventario inventario = buscar(productoId); // si no existe lanza InventarioNoEncontradoException
             throw new StockInsuficienteException(productoId, inventario.getCantidadDisponible(), cantidad);
         }
-
-        inventario.setCantidadDisponible(inventario.getCantidadDisponible() - cantidad);
-        inventario.setCantidadReservada(inventario.getCantidadReservada() + cantidad);
-        inventario.setUltimaActualizacion(LocalDateTime.now());
-        return mapearAResponse(inventario);
+        return mapearAResponse(buscar(productoId));
     }
 
     @Transactional
