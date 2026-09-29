@@ -41,6 +41,9 @@ import io.github.danielmelejpinto.productoapi.repository.ProductoRepository;
 @ExtendWith(MockitoExtension.class)
 class ProductoServiceTest {
 
+    private static final String ID_FIELD = "id";
+    private static final String CAMPO_INVENTADO = "campoInventado";
+
     @Mock
     private ProductoRepository repository;
 
@@ -132,7 +135,7 @@ class ProductoServiceTest {
     @Test
     void obtenerTodos_conProductos_deberiaMapearLaPaginaAResponse() {
         Pageable pageable = PageRequest.of(0, 10);
-        Sort sortId = pageable.getSort().and(Sort.by("id"));
+        Sort sortId = pageable.getSort().and(Sort.by(ID_FIELD));
         Pageable expectedPageable = PageRequest.of(0, 10, sortId);
 
         when(repository.findByEstado(eq(EstadoProducto.ACTIVO), eq(expectedPageable))).thenReturn(new PageImpl<>(List.of(
@@ -150,7 +153,7 @@ class ProductoServiceTest {
     @Test
     void obtenerTodos_sinProductos_deberiaDevolverPaginaVacia() {
         Pageable pageable = PageRequest.of(0, 10);
-        Sort sortId = pageable.getSort().and(Sort.by("id"));
+        Sort sortId = pageable.getSort().and(Sort.by(ID_FIELD));
         Pageable expectedPageable = PageRequest.of(0, 10, sortId);
 
         when(repository.findByEstado(eq(EstadoProducto.ACTIVO), eq(expectedPageable))).thenReturn(new PageImpl<>(List.of(), expectedPageable, 0));
@@ -160,7 +163,7 @@ class ProductoServiceTest {
 
     @Test
     void obtenerTodos_conCampoDeOrdenNoPermitido_deberiaLanzarExcepcionYNoConsultar() {
-        Pageable pageable = PageRequest.of(0, 10, Sort.by("campoInventado"));
+        Pageable pageable = PageRequest.of(0, 10, Sort.by(CAMPO_INVENTADO));
 
         assertThatThrownBy(() -> service.obtenerTodos(pageable))
                 .isInstanceOf(OrdenamientoInvalidoException.class)

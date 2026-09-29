@@ -26,6 +26,9 @@ import io.github.danielmelejpinto.productoapi.repository.OutboxEventRepository;
 @Transactional(readOnly = true)
 public class ProductoService {
 
+    private static final String ID_FIELD = "id";
+
+
     private static final List<String> CAMPOS_ORDENABLES = List.of("id", "nombre", "precio", "fechaCreacion");
 
     private final ProductoRepository repository;
@@ -60,7 +63,7 @@ public class ProductoService {
         validarOrdenamiento(pageable.getSort());
         
         // Agregar "id" como desempate para paginación estable si no está presente como criterio único principal (siempre lo anexamos)
-        Sort sort = pageable.getSort().and(Sort.by("id"));
+        Sort sort = pageable.getSort().and(Sort.by(ID_FIELD));
         Pageable pageableConId = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
         
         return repository.findByEstado(EstadoProducto.ACTIVO, pageableConId).map(this::mapearAResponse);
