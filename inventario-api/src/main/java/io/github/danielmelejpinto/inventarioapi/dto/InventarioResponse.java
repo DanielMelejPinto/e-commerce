@@ -1,45 +1,13 @@
-package io.github.danielmelejpinto.inventarioapi.model;
+package io.github.danielmelejpinto.inventarioapi.dto;
 
 import java.time.LocalDateTime;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+public class InventarioResponse {
 
-import jakarta.persistence.Version;
-
-@Entity 
-public class Inventario {
-    @Id 
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long inventarioId;
-
-    @Column(nullable = false)
     private Long productoId;
-    
-    @Version
-    private Long version;
-
-    @Column(nullable = false)
     private Integer cantidadDisponible;
-
-    @Column(nullable = false)
     private Integer cantidadReservada;
-
-    @Column(nullable = false)
     private LocalDateTime ultimaActualizacion;
-
-    
-    
-    public Long getInventarioId() {
-        return inventarioId;
-    }
-
-    public void setInventarioId(Long inventarioId) {
-        this.inventarioId = inventarioId;
-    }
 
     public Long getProductoId() {
         return productoId;
@@ -72,7 +40,4 @@ public class Inventario {
     public void setUltimaActualizacion(LocalDateTime ultimaActualizacion) {
         this.ultimaActualizacion = ultimaActualizacion;
     }
-
-     
-    
 }

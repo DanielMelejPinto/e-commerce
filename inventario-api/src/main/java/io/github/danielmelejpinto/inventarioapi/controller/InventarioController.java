@@ -1,49 +1,65 @@
 package io.github.danielmelejpinto.inventarioapi.controller;
 
-import org.springframework.web.bind.annotation.*;
-import io.github.danielmelejpinto.inventarioapi.model.Inventario;
-import io.github.danielmelejpinto.inventarioapi.service.InventarioService;
+import java.net.URI;
 
-@RestController 
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+
+import io.github.danielmelejpinto.inventarioapi.dto.CantidadRequest;
+import io.github.danielmelejpinto.inventarioapi.dto.InventarioResponse;
+import io.github.danielmelejpinto.inventarioapi.service.InventarioService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+
+@RestController
 @RequestMapping("/api/inventarios")
+@Tag(name = "Inventario", description = "Existencias y reservas de stock por producto")
 public class InventarioController {
-    
+
     private final InventarioService service;
 
     public InventarioController(InventarioService service) {
         this.service = service;
     }
 
-    // 1. Consultar el inventario de un producto (GET)
     @GetMapping("/producto/{productoId}")
-    public Inventario obtenerInventario(@PathVariable Long productoId) {
+    @Operation(summary = "Consultar el inventario de un producto")
+    @ApiResponse(responseCode = "200", description = "Inventario encontrado")
+    @ApiResponse(responseCode = "404", description = "El producto no tiene inventario")
+    public InventarioResponse obtener(@PathVariable Long productoId) {
         return service.obtenerPorProductoId(productoId);
     }
 
-    // 2. Inicializar inventario (POST) - Para cuando creas un producto nuevo
     @PostMapping("/producto/{productoId}")
-    public Inventario inicializarInventario(@PathVariable Long productoId) {
-        return service.inicializarInventario(productoId);
+    @Operation(summary = "Inicializar el inventario de un producto (idempotente)")
+    @ApiResponse(responseCode = "201", description = "Inventario listo, con stock inicial en cero")
+    public ResponseEntity<InventarioResponse> inicializar(@PathVariable Long productoId) {
+        InventarioResponse response = service.inicializarInventario(productoId);
+        URI location = ServletUriComponentsBuilder.fromCurrentRequest().build().toUri();
+        return ResponseEntity.created(location).body(response);
     }
 
-    // 3. Agregar stock (PUT) - Para cuando te llega mercancía nueva
     @PutMapping("/producto/{productoId}/agregar")
-    public Inventario agregarStock(
-            @PathVariable Long productoId, 
-            @RequestParam Integer cantidad) {
-        
-        return service.agregarStock(productoId, cantidad);
+    @Operation(summary = "Agregar stock (ingreso de mercadería)")
+    @ApiResponse(responseCode = "200", description = "Stock actualizado")
+    @ApiResponse(responseCode = "400", description = "Cantidad inválida")
+    @ApiResponse(responseCode = "404", description = "El producto no tiene inventario")
+    public InventarioResponse agregar(@PathVariable Long productoId,
+            @Valid @RequestBody CantidadRequest request) {
+        return service.agregarStock(productoId, request.getCantidad());
     }
 
-    // 4. Reservar stock (PUT) - Para cuando un cliente va a pagar su carrito
     @PutMapping("/producto/{productoId}/reservar")
-    public String reservarStock(
-            @PathVariable Long productoId, 
-            @RequestParam Integer cantidad) {
-        
-        service.reservarStock(productoId, cantidad);
-        
-        // Retornamos un mensaje simple de texto para confirmar que funcionó
-        return "Stock de " + cantidad + " unidades reservado con éxito para el producto: " + productoId;
+    @Operation(summary = "Reservar stock para una compra")
+    @ApiResponse(responseCode = "200", description = "Stock reservado")
+    @ApiResponse(responseCode = "400", description = "Cantidad inválida")
+    @ApiResponse(responseCode = "404", description = "El producto no tiene inventario")
+    @ApiResponse(responseCode = "409", description = "Stock insuficiente o conflicto de concurrencia")
+    public InventarioResponse reservar(@PathVariable Long productoId,
+            @Valid @RequestBody CantidadRequest request) {
+        return service.reservarStock(productoId, request.getCantidad());
     }
 }

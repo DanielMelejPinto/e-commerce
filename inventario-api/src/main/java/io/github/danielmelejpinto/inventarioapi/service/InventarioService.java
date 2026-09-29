@@ -1,64 +1,82 @@
 package io.github.danielmelejpinto.inventarioapi.service;
 
-import org.springframework.stereotype.Service;
-import io.github.danielmelejpinto.inventarioapi.model.Inventario;
-import io.github.danielmelejpinto.inventarioapi.repository.InventarioRepository;
 import java.time.LocalDateTime;
 
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import io.github.danielmelejpinto.inventarioapi.dto.InventarioResponse;
+import io.github.danielmelejpinto.inventarioapi.exception.InventarioNoEncontradoException;
+import io.github.danielmelejpinto.inventarioapi.exception.StockInsuficienteException;
+import io.github.danielmelejpinto.inventarioapi.model.Inventario;
+import io.github.danielmelejpinto.inventarioapi.repository.InventarioRepository;
+
 @Service
+@Transactional(readOnly = true)
 public class InventarioService {
 
-    // Inyección de dependencias mediante constructor (Buenas prácticas)
     private final InventarioRepository repository;
 
     public InventarioService(InventarioRepository repository) {
         this.repository = repository;
     }
 
-    // 1. Obtener el inventario de un producto específico
-    public Inventario obtenerPorProductoId(Long productoId) {
-        return repository.findByProductoId(productoId)
-                .orElseThrow(() -> new RuntimeException("No se encontró inventario para el producto: " + productoId));
+    public InventarioResponse obtenerPorProductoId(Long productoId) {
+        return mapearAResponse(buscar(productoId));
     }
 
-    // 2. Crear un registro de inventario desde cero (Ej: al registrar un producto nuevo)
-    public Inventario inicializarInventario(Long productoId) {
+    // Idempotente: si ya existe, devuelve el existente en vez de crear un duplicado
+    @Transactional
+    public InventarioResponse inicializarInventario(Long productoId) {
+        Inventario inventario = repository.findByProductoId(productoId)
+                .orElseGet(() -> repository.save(crearVacio(productoId)));
+        return mapearAResponse(inventario);
+    }
+
+    // No hace falta repository.save(): la entidad está gestionada por JPA y se
+    // persiste al cerrar la transacción (con la comprobación de @Version)
+    @Transactional
+    public InventarioResponse agregarStock(Long productoId, int cantidad) {
+        Inventario inventario = buscar(productoId);
+        inventario.setCantidadDisponible(inventario.getCantidadDisponible() + cantidad);
+        inventario.setUltimaActualizacion(LocalDateTime.now());
+        return mapearAResponse(inventario);
+    }
+
+    @Transactional
+    public InventarioResponse reservarStock(Long productoId, int cantidad) {
+        Inventario inventario = buscar(productoId);
+
+        if (inventario.getCantidadDisponible() < cantidad) {
+            throw new StockInsuficienteException(productoId, inventario.getCantidadDisponible(), cantidad);
+        }
+
+        inventario.setCantidadDisponible(inventario.getCantidadDisponible() - cantidad);
+        inventario.setCantidadReservada(inventario.getCantidadReservada() + cantidad);
+        inventario.setUltimaActualizacion(LocalDateTime.now());
+        return mapearAResponse(inventario);
+    }
+
+    private Inventario buscar(Long productoId) {
+        return repository.findByProductoId(productoId)
+                .orElseThrow(() -> new InventarioNoEncontradoException(productoId));
+    }
+
+    private Inventario crearVacio(Long productoId) {
         Inventario inventario = new Inventario();
         inventario.setProductoId(productoId);
         inventario.setCantidadDisponible(0);
         inventario.setCantidadReservada(0);
         inventario.setUltimaActualizacion(LocalDateTime.now());
-        
-        return repository.save(inventario);
+        return inventario;
     }
 
-    // 3. Agregar stock (Ej: cuando llegan nuevas unidades a la bodega)
-    public Inventario agregarStock(Long productoId, Integer cantidadAñadida) {
-        Inventario inventario = obtenerPorProductoId(productoId);
-        
-        int nuevoStock = inventario.getCantidadDisponible() + cantidadAñadida;
-        inventario.setCantidadDisponible(nuevoStock);
-        inventario.setUltimaActualizacion(LocalDateTime.now());
-        
-        return repository.save(inventario);
-    }
-
-    // 4. Reservar stock (Ej: cuando el cliente le da a "Comprar")
-    public void reservarStock(Long productoId, Integer cantidadComprada) {
-        Inventario inventario = obtenerPorProductoId(productoId);
-        
-        // Regla de negocio: ¿Hay suficiente stock para vender?
-        if (inventario.getCantidadDisponible() >= cantidadComprada) {
-            
-            // Restamos de disponible y pasamos a reservado
-            inventario.setCantidadDisponible(inventario.getCantidadDisponible() - cantidadComprada);
-            inventario.setCantidadReservada(inventario.getCantidadReservada() + cantidadComprada);
-            inventario.setUltimaActualizacion(LocalDateTime.now());
-            
-            repository.save(inventario);
-        } else {
-            // Si no alcanza, detenemos la operación con un error
-            throw new RuntimeException("Stock insuficiente para el producto: " + productoId);
-        }
+    private InventarioResponse mapearAResponse(Inventario inventario) {
+        InventarioResponse response = new InventarioResponse();
+        response.setProductoId(inventario.getProductoId());
+        response.setCantidadDisponible(inventario.getCantidadDisponible());
+        response.setCantidadReservada(inventario.getCantidadReservada());
+        response.setUltimaActualizacion(inventario.getUltimaActualizacion());
+        return response;
     }
 }
