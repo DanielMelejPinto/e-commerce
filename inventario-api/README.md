@@ -1,59 +1,105 @@
 # Inventario API
 
-Microservicio de inventario del e-commerce.
+Microservicio de inventario del e-commerce, desarrollado con **Java 21** y **Spring Boot 4**.
 
 ## Descripción
 
-Gestiona las existencias y reservas de stock por producto, trabajando de la mano con `producto-api`.
+Gestiona las existencias y reservas de stock por producto, trabajando de la mano con [`producto-api`](../producto-api). Es un servicio **interno**: lo consume `producto-api` (inicializar y eliminar inventarios) y, en el futuro, el servicio que gestione las compras (reservar stock).
 
 ## Stack tecnológico
 
-- Java 21
-- Spring Boot 4.1.1
-- Spring Data JPA + H2 (base de datos en memoria)
-- Maven 3.9
-- Testcontainers (para testeo de contexto con PostgreSQL)
+- **Java 21**
+- **Spring Boot 4.1.1** (Web MVC, Data JPA, Validation, Actuator)
+- **H2** en memoria (base de datos de la aplicación, ver [Limitaciones conocidas](#limitaciones-conocidas))
+- **springdoc-openapi** (documentación interactiva con Swagger UI)
+- **JUnit 5 + Mockito + MockMvc** (tests de controller, service y manejo de errores)
+- **Testcontainers + PostgreSQL 17** (solo para el test de contexto)
+- **Maven 3.9** (incluido vía `mvnw`)
+
+> Flyway y el driver de PostgreSQL están en el `pom.xml` como preparación para una futura migración a PostgreSQL, pero hoy Flyway está desactivado (`spring.flyway.enabled=false`) y no hay scripts de migración.
 
 ## Requisitos
 
-- Java 21
-- Docker (opcional, solo necesario para correr el test de contexto con Testcontainers)
+- Java 21 (Maven no hace falta instalarlo: el proyecto incluye `mvnw`)
+- Docker, necesario para correr `./mvnw test` (el test de contexto levanta un PostgreSQL con Testcontainers)
 
 ## Cómo levantar el proyecto
 
-La aplicación arranca por defecto en el puerto 8081 usando H2 en memoria.
+La aplicación arranca por defecto en el puerto **8081** usando H2 en memoria:
 
 ```bash
 ./mvnw spring-boot:run
 ```
 
-La app queda disponible en `http://localhost:8081`. 
+La app queda disponible en `http://localhost:8081`.
 
-La documentación interactiva de la API con Swagger UI está disponible en:
+La documentación interactiva de la API (Swagger UI) está en:
+
 ```
 http://localhost:8081/swagger-ui.html
 ```
 
+El estado de salud del servicio se puede consultar en `http://localhost:8081/actuator/health`.
+
+> **Importante:** los datos viven en memoria y **se pierden al reiniciar**. Si `producto-api` sigue con sus productos y reinicias `inventario-api`, esos productos quedarán sin inventario (consultarlo dará `404`) hasta que se vuelva a inicializar con el `POST`.
+
 ## Endpoints
 
-| Método   | Ruta                                            | Descripción                             | Respuestas                  |
-|----------|-------------------------------------------------|-----------------------------------------|-----------------------------|
+| Método   | Ruta                                              | Descripción                             | Respuestas                  |
+|----------|---------------------------------------------------|-----------------------------------------|-----------------------------|
 | `GET`    | `/api/inventarios/producto/{productoId}`          | Consultar el inventario de un producto  | `200`, `400`, `404`         |
-| `POST`   | `/api/inventarios/producto/{productoId}`          | Inicializar el inventario (idempotente) | `201`                       |
-| `PUT`    | `/api/inventarios/producto/{productoId}/agregar`  | Agregar stock                           | `200`, `400`, `404`         |
+| `POST`   | `/api/inventarios/producto/{productoId}`          | Inicializar el inventario (idempotente) | `201`, `409`                |
+| `PUT`    | `/api/inventarios/producto/{productoId}/agregar`  | Agregar stock                           | `200`, `400`, `404`, `409`  |
 | `PUT`    | `/api/inventarios/producto/{productoId}/reservar` | Reservar stock                          | `200`, `400`, `404`, `409`  |
-| `DELETE` | `/api/inventarios/producto/{productoId}`          | Eliminar el inventario                  | `204`                       |
+| `DELETE` | `/api/inventarios/producto/{productoId}`          | Eliminar el inventario (idempotente)    | `204`                       |
+
+**Validaciones** de `agregar` y `reservar`: `cantidad` obligatoria, mayor a cero y como máximo `100000` por operación.
+
+### Detalles de comportamiento
+
+- **`POST` idempotente:** si el inventario del producto ya existe, devuelve el existente **sin modificarlo** (conserva su stock). Responde `201` en ambos casos.
+- **`DELETE` idempotente:** responde `204` exista o no el inventario.
+- **`reservar`:** mueve unidades de `cantidadDisponible` a `cantidadReservada`. Si no alcanza el stock responde `409`.
+
+### Ejemplo — agregar stock
+
+```bash
+curl -X PUT http://localhost:8081/api/inventarios/producto/1/agregar \
+  -H "Content-Type: application/json" \
+  -d '{"cantidad": 10}'
+```
+
+Respuesta (`200 OK`):
+
+```json
+{
+  "productoId": 1,
+  "cantidadDisponible": 10,
+  "cantidadReservada": 0,
+  "ultimaActualizacion": "2026-09-29T10:15:00"
+}
+```
 
 ## Manejo de errores
 
-Los errores de validación de cuerpo y tipos devuelven respuestas HTTP acordes (`400 Bad Request`). Para los de negocio usamos mensajes específicos:
+Todas las respuestas de error son JSON. Los errores de validación devuelven un mapa `campo → mensaje`:
+
+```json
+{
+  "cantidad": "La cantidad debe ser mayor a cero"
+}
+```
+
+El resto usa la forma `{"error": "..."}`:
 
 | Código | Cuándo ocurre |
 |---|---|
-| `400` | Datos inválidos, JSON mal formado, id no numérico o valores negativos/fuera de límite |
+| `400` | Datos inválidos, JSON mal formado, id no numérico o cantidad fuera de límite |
 | `404` | El producto no tiene inventario |
-| `409` | Stock insuficiente para reservar, o dos operaciones modificaron el mismo inventario a la vez (`@Version`), o violación de restricción |
-| `500` | Error inesperado |
+| `409` | Stock insuficiente para reservar, conflicto de concurrencia (`@Version`: dos operaciones modificaron el mismo inventario a la vez) o violación de restricción (por ejemplo, `productoId` duplicado) |
+| `500` | Error inesperado. El detalle va al log del servidor, nunca al cliente |
+
+> Un `409` por concurrencia **no significa necesariamente que falte stock**: el cliente puede reintentar la operación.
 
 ## Correr los tests
 
@@ -61,7 +107,17 @@ Los errores de validación de cuerpo y tipos devuelven respuestas HTTP acordes (
 ./mvnw test
 ```
 
-A diferencia de `producto-api`, el test de contexto de `inventario-api` usa Testcontainers, por lo que **necesita Docker corriendo**. En los tests unitarios (con perfil `test`) se usa una base en memoria H2.
+Requiere **Docker corriendo**. A diferencia de `producto-api`, el test de contexto usa Testcontainers (PostgreSQL 17); el resto de los tests usan el perfil `test` con H2 en memoria y no necesitan Docker por sí mismos.
+
+| Clase | Qué cubre | Tests |
+|---|---|---|
+| `InventarioControllerTest` | Endpoints, validaciones, idempotencia, reservas y una prueba de concurrencia (dos reservas simultáneas sobre stock 1) | 14 |
+| `InventarioServiceTest` | Lógica de negocio con repositorio simulado | 12 |
+| `GlobalExceptionHandlerTest` | Respuestas `409` ante conflicto de concurrencia y de integridad | 2 |
+| `DocumentacionApiTest` | Que el OpenAPI se genere y describa los endpoints | 1 |
+| `InventarioApiApplicationTests` | Que el contexto de Spring arranque contra PostgreSQL (Testcontainers) | 1 |
+
+> Los tests de concurrencia corren sobre H2; su comportamiento de bloqueo no es idéntico al de PostgreSQL.
 
 ## Estructura del proyecto
 
@@ -72,11 +128,16 @@ src/main/java/io/github/danielmelejpinto/inventarioapi/
 ├── repository/     # Acceso a datos (Spring Data JPA)
 ├── model/          # Entidades JPA
 ├── dto/            # Objetos de entrada/salida (Request/Response)
-├── exception/      # Excepciones personalizadas y manejo global
-└── config/         # Configuración y OpenAPI/Swagger
+└── exception/      # Excepciones personalizadas y manejo global
 
 src/main/resources/
-└── application.properties          # Configuración común (puerto 8081, H2, Flyway desactivado en dev)
+└── application.properties          # Configuración (puerto 8081, H2, Flyway desactivado)
+
+src/test/java/.../inventarioapi/
+├── controller/     # Tests de endpoints (MockMvc)
+├── service/        # Tests unitarios con Mockito
+├── exception/      # Tests del manejador global de errores
+└── TestcontainersConfiguration.java   # PostgreSQL 17 para el test de contexto
 
 src/test/resources/
 └── application-test.properties     # Perfil test (H2 vacía)
@@ -84,13 +145,25 @@ src/test/resources/
 
 ## Relación con producto-api
 
-`inventario-api` es llamado por `producto-api` en dos momentos clave:
-1. **Al crear un producto**: se inicializa el inventario con cantidad 0 (`POST`).
-2. **Al eliminar un producto**: se elimina el inventario correspondiente (`DELETE`).
+`producto-api` usa este servicio en dos momentos:
+
+1. **Al crear un producto:** una vez que el producto quedó **confirmado en su base de datos**, llama a `POST /api/inventarios/producto/{id}` para crear el inventario con stock en cero.
+2. **Al eliminar un producto:** tras confirmar el borrado, llama a `DELETE /api/inventarios/producto/{id}`.
+
+Estas llamadas se hacen **fuera de la transacción de `producto-api`** y se reintentan si fallan, por lo que la consistencia entre ambos servicios es **eventual**: durante un instante (o mientras `inventario-api` esté caído) un producto puede existir sin inventario. Para que los reintentos sean seguros, `POST` y `DELETE` son **idempotentes**.
+
+> Los productos de prueba que `producto-api` genera en su perfil `dev` no pasan por este flujo, así que no tienen inventario.
 
 ## Limitaciones conocidas
 
-- **Sin autenticación ni autorización.**
-- **Reservas sin liberar/confirmar:** el sistema reserva el stock pero no hay mecanismo para liberar reservas caducadas o confirmarlas tras un pago.
-- **Base de datos:** por ahora usa solo H2.
-- **Eliminación insegura:** el método `DELETE` elimina el inventario independientemente de si tiene o no reservas activas.
+- **Sin autenticación ni autorización.** Cualquiera con acceso al puerto 8081 puede agregar, reservar o borrar stock; este servicio no debería exponerse fuera de la red interna.
+- **Datos volátiles:** solo usa H2 en memoria; se pierden al reiniciar. Si `producto-api` también reinicia su base y reutiliza ids, `POST` devolverá el inventario antiguo con su stock en lugar de uno nuevo.
+- **Reservas sin identificador:** no existe una reserva como entidad. No se puede liberar, confirmar tras un pago ni caducar, y reintentar `reservar` tras un timeout **reserva dos veces**.
+- **Conflictos de concurrencia sin reintento interno:** dos operaciones simultáneas sobre el mismo inventario pueden dar `409` aunque haya stock suficiente; el cliente debe reintentar.
+- **Eliminación insegura:** `DELETE` borra el inventario aunque tenga reservas activas.
+- **`POST` responde siempre `201`,** incluso cuando el inventario ya existía.
+- **Sin migraciones:** el esquema lo genera Hibernate (`ddl-auto=update`); Flyway está preparado pero desactivado.
+
+## Autor
+
+**Daniel Melej Pinto**
