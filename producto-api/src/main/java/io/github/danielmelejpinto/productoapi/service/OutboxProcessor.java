@@ -2,6 +2,8 @@ package io.github.danielmelejpinto.productoapi.service;
 
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -16,6 +18,8 @@ import io.github.danielmelejpinto.productoapi.repository.ProductoRepository;
 
 @Component
 public class OutboxProcessor {
+
+    private static final Logger log = LoggerFactory.getLogger(OutboxProcessor.class);
 
     private final OutboxEventRepository eventRepository;
     private final ProductoRepository productoRepository;
@@ -35,6 +39,7 @@ public class OutboxProcessor {
             Producto producto = productoRepository.findById(event.getProductoId()).orElse(null);
             
             if (producto == null) {
+                log.error("Producto no existe para evento {}", event.getId());
                 event.setEstado(EstadoEvento.ERROR);
                 eventRepository.save(event);
                 continue;
@@ -42,6 +47,7 @@ public class OutboxProcessor {
 
             // Si el producto ya fue dado de baja, no llamamos a inventario y lo descartamos/marcamos enviado
             if (producto.getEstado() == EstadoProducto.BAJA) {
+                log.info("Evento {} enviado correctamente para producto {}", event.getId(), producto.getId());
                 event.setEstado(EstadoEvento.ENVIADO);
                 eventRepository.save(event);
                 continue;
@@ -50,6 +56,7 @@ public class OutboxProcessor {
             try {
                 inventarioClient.inicializarInventario(producto.getId());
                 
+                log.info("Evento {} enviado correctamente para producto {}", event.getId(), producto.getId());
                 event.setEstado(EstadoEvento.ENVIADO);
                 producto.setEstado(EstadoProducto.ACTIVO);
                 
@@ -57,6 +64,7 @@ public class OutboxProcessor {
                 eventRepository.save(event);
             } catch (InventarioRechazoException e) {
                 // 4xx: Error de contrato, permanente
+                log.error("Rechazo permanente para evento {} del producto {}", event.getId(), producto.getId());
                 event.setEstado(EstadoEvento.ERROR);
                 producto.setEstado(EstadoProducto.BAJA);
                 
@@ -65,6 +73,7 @@ public class OutboxProcessor {
             } catch (Exception e) {
                 // 5xx o timeout: Reintentar
                 event.setIntentos(event.getIntentos() + 1);
+                log.warn("Fallo recuperable en evento {} del producto {}. Intentos: {}. Error: {}", event.getId(), producto.getId(), event.getIntentos(), e.getMessage());
                 eventRepository.save(event);
             }
         }
