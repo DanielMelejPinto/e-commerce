@@ -64,9 +64,10 @@ class InventarioControllerTest {
     }
 
     @Test
-    void inicializar_deberiaRetornar201YLuegoAlLlamarloDeNuevoRetornarElMismo() throws Exception {
+    void inicializar_primeraVez_deberiaRetornar201YLuego200ManteniendoStock() throws Exception {
         Long productoId = NEXT_ID.getAndIncrement();
         
+        // a) primera llamada -> 201
         mockMvc.perform(post("/api/inventarios/producto/{id}", productoId))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.productoId").value(productoId))
@@ -74,9 +75,62 @@ class InventarioControllerTest {
                 .andExpect(jsonPath("$.cantidadReservada").value(0))
                 .andExpect(header().exists("Location"));
                 
+        // Agregar stock
+        mockMvc.perform(put("/api/inventarios/producto/{id}/agregar", productoId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"cantidad\": 5}"))
+                .andExpect(status().isOk());
+                
+        // b) segunda llamada -> 200, conservando el stock intacto
         mockMvc.perform(post("/api/inventarios/producto/{id}", productoId))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.productoId").value(productoId));
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.productoId").value(productoId))
+                .andExpect(jsonPath("$.cantidadDisponible").value(5))
+                .andExpect(jsonPath("$.cantidadReservada").value(0));
+    }
+
+    @Test
+    void concurrencia_variosHilosLlamandoInicializar_deberiaCrearSoloUnoYRestaSer200() throws Exception {
+        Long productoId = NEXT_ID.getAndIncrement();
+        
+        int nThreads = 5;
+        java.util.concurrent.ExecutorService executor = java.util.concurrent.Executors.newFixedThreadPool(nThreads);
+        java.util.concurrent.CountDownLatch latch = new java.util.concurrent.CountDownLatch(1);
+        
+        java.util.List<java.util.concurrent.Future<Integer>> futures = new java.util.ArrayList<>();
+
+        for (int i = 0; i < nThreads; i++) {
+            futures.add(executor.submit(() -> {
+                if (!latch.await(5, java.util.concurrent.TimeUnit.SECONDS)) {
+                    throw new IllegalStateException("Timeout esperando latch");
+                }
+                MvcResult result = mockMvc.perform(post("/api/inventarios/producto/{id}", productoId))
+                        .andReturn();
+                return result.getResponse().getStatus();
+            }));
+        }
+
+        latch.countDown();
+        
+        int status201 = 0;
+        int status200 = 0;
+        
+        for (java.util.concurrent.Future<Integer> future : futures) {
+            int status = future.get(10, java.util.concurrent.TimeUnit.SECONDS);
+            if (status == 201) status201++;
+            if (status == 200) status200++;
+        }
+        
+        executor.shutdown();
+        executor.awaitTermination(5, java.util.concurrent.TimeUnit.SECONDS);
+
+        org.assertj.core.api.Assertions.assertThat(status201).isEqualTo(1);
+        org.assertj.core.api.Assertions.assertThat(status200).isEqualTo(nThreads - 1);
+        
+        // Verificar que hay uno solo y con 0 stock
+        mockMvc.perform(get("/api/inventarios/producto/{id}", productoId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.cantidadDisponible").value(0));
     }
 
     @Test
@@ -233,9 +287,12 @@ class InventarioControllerTest {
         AtomicInteger status200 = new AtomicInteger(0);
         AtomicInteger status409 = new AtomicInteger(0);
 
+        java.util.List<java.util.concurrent.Future<Void>> futures = new java.util.ArrayList<>();
         Runnable task = () -> {
             try {
-                latch.await();
+                if (!latch.await(5, java.util.concurrent.TimeUnit.SECONDS)) {
+                    throw new IllegalStateException("Timeout esperando latch");
+                }
                 MvcResult result = mockMvc.perform(put("/api/inventarios/producto/{id}/reservar", productoId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"cantidad\": 1}"))
@@ -244,18 +301,25 @@ class InventarioControllerTest {
                 int status = result.getResponse().getStatus();
                 if (status == 200) status200.incrementAndGet();
                 if (status == 409) status409.incrementAndGet();
-            } catch (Exception ignored) {
+            } catch (Exception e) {
+                throw new RuntimeException(e);
             } finally {
                 endLatch.countDown();
             }
         };
 
-        executor.submit(task);
-        executor.submit(task);
+        futures.add(executor.submit(task, null));
+        futures.add(executor.submit(task, null));
 
         latch.countDown();
-        endLatch.await();
+        endLatch.await(5, java.util.concurrent.TimeUnit.SECONDS);
         executor.shutdown();
+        executor.awaitTermination(5, java.util.concurrent.TimeUnit.SECONDS);
+
+        // Fail if any task threw exception
+        for (java.util.concurrent.Future<Void> future : futures) {
+            future.get();
+        }
 
         assertThat(status200.get()).isEqualTo(1);
         assertThat(status409.get()).isEqualTo(1);

@@ -25,12 +25,25 @@ public class InventarioService {
         return mapearAResponse(buscar(productoId));
     }
 
-    // Idempotente: si ya existe, devuelve el existente en vez de crear un duplicado
-    @Transactional
-    public InventarioResponse inicializarInventario(Long productoId) {
-        Inventario inventario = repository.findByProductoId(productoId)
-                .orElseGet(() -> repository.save(crearVacio(productoId)));
-        return mapearAResponse(inventario);
+    // Se usa Propagation.NEVER para que la excepción de unicidad (DataIntegrityViolationException)
+    // que ocurre en repository.save no marque la transacción externa como rollback-only.
+    // El repositorio en sí mismo maneja sus propias transacciones internas para cada método.
+    @org.springframework.transaction.annotation.Transactional(propagation = org.springframework.transaction.annotation.Propagation.NEVER)
+    public io.github.danielmelejpinto.inventarioapi.dto.ResultadoInicializacion inicializarInventario(Long productoId) {
+        return repository.findByProductoId(productoId)
+                .map(inv -> new io.github.danielmelejpinto.inventarioapi.dto.ResultadoInicializacion(mapearAResponse(inv), false))
+                .orElseGet(() -> {
+                    try {
+                        Inventario nuevo = repository.save(crearVacio(productoId));
+                        return new io.github.danielmelejpinto.inventarioapi.dto.ResultadoInicializacion(mapearAResponse(nuevo), true);
+                    } catch (org.springframework.dao.DataIntegrityViolationException e) {
+                        // Otro hilo o proceso ganó la carrera y lo creó primero.
+                        // Volvemos a buscarlo (ya debería estar)
+                        Inventario existente = repository.findByProductoId(productoId)
+                                .orElseThrow(() -> new IllegalStateException("Se esperaba encontrar el inventario tras colisión, pero no está", e));
+                        return new io.github.danielmelejpinto.inventarioapi.dto.ResultadoInicializacion(mapearAResponse(existente), false);
+                    }
+                });
     }
 
     // No hace falta repository.save(): la entidad está gestionada por JPA y se

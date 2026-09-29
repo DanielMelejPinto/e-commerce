@@ -65,8 +65,10 @@ class InventarioServiceTest {
         when(repository.findByProductoId(productoId)).thenReturn(Optional.empty());
         when(repository.save(any(Inventario.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        InventarioResponse response = service.inicializarInventario(productoId);
+        io.github.danielmelejpinto.inventarioapi.dto.ResultadoInicializacion resultado = service.inicializarInventario(productoId);
+        InventarioResponse response = resultado.inventario();
 
+        assertThat(resultado.creado()).isTrue();
         assertThat(response.productoId()).isEqualTo(productoId);
         assertThat(response.cantidadDisponible()).isZero();
         assertThat(response.cantidadReservada()).isZero();
@@ -83,8 +85,10 @@ class InventarioServiceTest {
         
         when(repository.findByProductoId(productoId)).thenReturn(Optional.of(inventario));
 
-        InventarioResponse response = service.inicializarInventario(productoId);
+        io.github.danielmelejpinto.inventarioapi.dto.ResultadoInicializacion resultado = service.inicializarInventario(productoId);
+        InventarioResponse response = resultado.inventario();
 
+        assertThat(resultado.creado()).isFalse();
         assertThat(response.cantidadDisponible()).isEqualTo(10L);
         verify(repository, never()).save(any(Inventario.class));
     }

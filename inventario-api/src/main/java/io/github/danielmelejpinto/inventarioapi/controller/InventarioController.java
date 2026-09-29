@@ -3,7 +3,14 @@ package io.github.danielmelejpinto.inventarioapi.controller;
 import java.net.URI;
 
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import io.github.danielmelejpinto.inventarioapi.dto.CantidadRequest;
@@ -35,11 +42,15 @@ public class InventarioController {
 
     @PostMapping
     @Operation(summary = "Inicializar el inventario de un producto (idempotente)")
-    @ApiResponse(responseCode = "201", description = "Inventario listo, con stock inicial en cero")
+    @ApiResponse(responseCode = "201", description = "Inventario creado, con stock inicial en cero")
+    @ApiResponse(responseCode = "200", description = "El inventario ya existía")
     public ResponseEntity<InventarioResponse> inicializar(@PathVariable Long productoId) {
-        InventarioResponse response = service.inicializarInventario(productoId);
-        URI location = ServletUriComponentsBuilder.fromCurrentRequest().build().toUri();
-        return ResponseEntity.created(location).body(response);
+        io.github.danielmelejpinto.inventarioapi.dto.ResultadoInicializacion resultado = service.inicializarInventario(productoId);
+        if (resultado.creado()) {
+            URI location = ServletUriComponentsBuilder.fromCurrentRequest().build().toUri();
+            return ResponseEntity.created(location).body(resultado.inventario());
+        }
+        return ResponseEntity.ok(resultado.inventario());
     }
 
     @PutMapping("/agregar")
