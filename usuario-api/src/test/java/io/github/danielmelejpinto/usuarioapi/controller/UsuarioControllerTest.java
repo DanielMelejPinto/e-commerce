@@ -2,6 +2,7 @@ package io.github.danielmelejpinto.usuarioapi.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -163,5 +164,95 @@ class UsuarioControllerTest {
         registrar("{\"nombre\": \"Ana\", ")
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("El cuerpo de la petición no es un JSON válido"));
+    }
+
+    // -------------------------------------------------------------
+    // PRUEBAS DE LOGIN
+    // -------------------------------------------------------------
+
+    @Test
+    void login_conCredencialesCorrectas_deberiaRetornar200YToken() throws Exception {
+        String email = emailUnico();
+        String password = "MiClaveSecreta123!";
+
+        registrar(cuerpo("Carlos Login", email, password)).andExpect(status().isCreated());
+
+        String jsonLogin = """
+                {
+                    "email": "%s",
+                    "password": "%s"
+                }
+                """.formatted(email, password);
+
+        mockMvc.perform(post("/api/usuarios/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonLogin))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.token").exists())
+                .andExpect(jsonPath("$.token").isString());
+    }
+
+    @Test
+    void login_conCredencialesIncorrectas_deberiaRetornar401() throws Exception {
+        String email = emailUnico();
+
+        registrar(cuerpo("Carlos Fallo", email, "ClaveCorrecta99")).andExpect(status().isCreated());
+
+        String jsonLogin = """
+                {
+                    "email": "%s",
+                    "password": "ClaveINCORRECTA"
+                }
+                """.formatted(email);
+
+        mockMvc.perform(post("/api/usuarios/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonLogin))
+                .andExpect(status().isUnauthorized()); 
+    }
+
+    // -------------------------------------------------------------
+    // PRUEBAS DE ENDPOINT PROTEGIDO (/me)
+    // -------------------------------------------------------------
+
+    @Test
+    void obtenerPerfil_sinToken_deberiaRetornar403() throws Exception {
+        // Intenta acceder sin enviar el header Authorization
+        mockMvc.perform(get("/api/usuarios/me"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void obtenerPerfil_conTokenValido_deberiaRetornar200YDatos() throws Exception {
+        String email = emailUnico();
+        String password = "ClaveParaToken123!";
+
+        // 1. Registramos
+        registrar(cuerpo("Token User", email, password)).andExpect(status().isCreated());
+
+        // 2. Hacemos Login y extraemos el Token
+        String jsonLogin = """
+                {
+                    "email": "%s",
+                    "password": "%s"
+                }
+                """.formatted(email, password);
+
+        MvcResult result = mockMvc.perform(post("/api/usuarios/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonLogin))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        // Extraer token de la respuesta {"token":"..."}
+        String responseBody = result.getResponse().getContentAsString();
+        String token = responseBody.split(":")[1].replaceAll("[\"}]", "").trim();
+
+        // 3. Probamos el endpoint protegido con el Token real
+        mockMvc.perform(get("/api/usuarios/me")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.nombre").value("Token User"))
+                .andExpect(jsonPath("$.email").value(email));
     }
 }

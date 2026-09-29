@@ -13,6 +13,7 @@ import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.security.authentication.BadCredentialsException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -46,6 +47,13 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(EmailYaRegistradoException.class)
     public ResponseEntity<Map<String, String>> manejarEmailDuplicado(EmailYaRegistradoException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", ex.getMessage()));
+    }
+
+    // 401: credenciales incorrectas en login
+    @ExceptionHandler(BadCredentialsException.class)
+    public ResponseEntity<Map<String, String>> manejarCredencialesInvalidas(BadCredentialsException ex) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(Map.of("error", "Email o contraseña incorrectos"));
     }
 
     // 500: respaldo para lo imprevisto (el detalle va al log, nunca al cliente)

@@ -26,11 +26,20 @@ import io.github.danielmelejpinto.usuarioapi.model.Rol;
 import io.github.danielmelejpinto.usuarioapi.model.Usuario;
 import io.github.danielmelejpinto.usuarioapi.repository.UsuarioRepository;
 
+import org.springframework.security.authentication.AuthenticationManager;
+import io.github.danielmelejpinto.usuarioapi.security.JwtService;
+
 @ExtendWith(MockitoExtension.class)
 class UsuarioServiceTest {
 
     @Mock
     private UsuarioRepository repository;
+
+    @Mock
+    private AuthenticationManager authenticationManager;
+
+    @Mock
+    private JwtService jwtService;
 
     // BCrypt real pero con costo mínimo, para poder comprobar el hash de verdad
     private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder(4);
@@ -39,7 +48,7 @@ class UsuarioServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new UsuarioService(repository, passwordEncoder);
+        service = new UsuarioService(repository, passwordEncoder, authenticationManager, jwtService);
     }
 
     private RegistroRequest request(String email, String password) {

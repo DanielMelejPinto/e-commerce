@@ -6,8 +6,12 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.security.core.Authentication;
 
+import io.github.danielmelejpinto.usuarioapi.dto.LoginRequest;
 import io.github.danielmelejpinto.usuarioapi.dto.RegistroRequest;
+import io.github.danielmelejpinto.usuarioapi.dto.TokenResponse;
 import io.github.danielmelejpinto.usuarioapi.dto.UsuarioResponse;
 import io.github.danielmelejpinto.usuarioapi.service.UsuarioService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -34,5 +38,23 @@ public class UsuarioController {
     @ApiResponse(responseCode = "409", description = "El email ya está registrado")
     public ResponseEntity<UsuarioResponse> registrar(@Valid @RequestBody RegistroRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(service.registrar(request));
+    }
+
+    // NUEVO ENDPOINT
+    @PostMapping("/login")
+    @Operation(summary = "Iniciar sesión (autenticación)")
+    @ApiResponse(responseCode = "200", description = "Autenticación exitosa, retorna token JWT")
+    @ApiResponse(responseCode = "401", description = "Credenciales incorrectas") // Este error lo arroja Spring Security automáticamente
+    public ResponseEntity<TokenResponse> login(@Valid @RequestBody LoginRequest request) {
+        return ResponseEntity.ok(service.login(request));
+    }
+
+    @GetMapping("/me")
+    @Operation(summary = "Obtener el perfil del usuario autenticado")
+    @ApiResponse(responseCode = "200", description = "Perfil obtenido con éxito")
+    @ApiResponse(responseCode = "403", description = "No autenticado o token inválido")
+    public ResponseEntity<UsuarioResponse> obtenerMiPerfil(Authentication authentication) {
+        String emailAutenticado = authentication.getName();
+        return ResponseEntity.ok(service.obtenerPerfil(emailAutenticado));
     }
 }

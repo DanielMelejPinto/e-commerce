@@ -3,16 +3,22 @@ package io.github.danielmelejpinto.usuarioapi.service;
 import java.nio.charset.StandardCharsets;
 
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import io.github.danielmelejpinto.usuarioapi.dto.LoginRequest;
 import io.github.danielmelejpinto.usuarioapi.dto.RegistroRequest;
+import io.github.danielmelejpinto.usuarioapi.dto.TokenResponse;
 import io.github.danielmelejpinto.usuarioapi.dto.UsuarioResponse;
 import io.github.danielmelejpinto.usuarioapi.exception.CampoInvalidoException;
 import io.github.danielmelejpinto.usuarioapi.exception.EmailYaRegistradoException;
 import io.github.danielmelejpinto.usuarioapi.model.Usuario;
 import io.github.danielmelejpinto.usuarioapi.repository.UsuarioRepository;
+import io.github.danielmelejpinto.usuarioapi.security.JwtService;
 
 @Service
 @Transactional(readOnly = true)
@@ -23,10 +29,17 @@ public class UsuarioService {
 
     private final UsuarioRepository repository;
     private final PasswordEncoder passwordEncoder;
+    private final AuthenticationManager authenticationManager;
+    private final JwtService jwtService;
 
-    public UsuarioService(UsuarioRepository repository, PasswordEncoder passwordEncoder) {
+    public UsuarioService(UsuarioRepository repository, 
+                          PasswordEncoder passwordEncoder,
+                          AuthenticationManager authenticationManager,
+                          JwtService jwtService) {
         this.repository = repository;
         this.passwordEncoder = passwordEncoder;
+        this.authenticationManager = authenticationManager;
+        this.jwtService = jwtService;
     }
 
     @Transactional
@@ -54,6 +67,26 @@ public class UsuarioService {
             // Dos registros simultáneos con el mismo email: el segundo choca con el unique
             throw new EmailYaRegistradoException();
         }
+    }
+
+    public TokenResponse login(LoginRequest request) {
+        String emailLimpio = Usuario.normalizarEmail(request.email());
+
+        // Spring Security valida mágicamente la contraseña internamente aquí
+        // Si la contraseña es incorrecta, lanzará una BadCredentialsException
+        authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(emailLimpio, request.password())
+        );
+
+        // Si llega a esta línea, es porque la contraseña era correcta
+        String token = jwtService.generarToken(emailLimpio);
+        return new TokenResponse(token);
+    }
+
+    public UsuarioResponse obtenerPerfil(String email) {
+        Usuario usuario = repository.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado"));
+        return mapearAResponse(usuario);
     }
 
     private UsuarioResponse mapearAResponse(Usuario usuario) {
