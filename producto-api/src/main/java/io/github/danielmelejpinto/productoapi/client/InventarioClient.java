@@ -21,10 +21,10 @@ public class InventarioClient {
             restClient.post()
                     .uri("/api/inventarios/producto/{id}", productoId)
                     .retrieve()
-                    .onStatus(HttpStatusCode::is4xxClientError, (request, response) -> {
+                    .onStatus(status -> status.is4xxClientError(), (request, response) -> {
                         throw new InventarioRechazoException("El inventario rechazó la petición (4xx) para el producto " + productoId);
                     })
-                    .onStatus(HttpStatusCode::is5xxServerError, (request, response) -> {
+                    .onStatus(status -> status.is5xxServerError(), (request, response) -> {
                         throw new InventarioNoDisponibleException("El inventario devolvió error de servidor (5xx) para el producto " + productoId, null);
                     })
                     .toBodilessEntity();

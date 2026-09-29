@@ -3,8 +3,11 @@ package io.github.danielmelejpinto.productoapi.client;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withException;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
+
+import java.io.IOException;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -42,6 +45,7 @@ class InventarioClientTest {
     @Test
     void inicializarInventario_conRespuesta4xx_deberiaLanzarInventarioRechazoException() {
         mockServer.expect(requestTo("http://inventario.test/api/inventarios/producto/2"))
+                .andExpect(method(HttpMethod.POST))
                 .andRespond(withStatus(HttpStatus.BAD_REQUEST));
 
         assertThatThrownBy(() -> client.inicializarInventario(2L))
@@ -54,11 +58,26 @@ class InventarioClientTest {
     @Test
     void inicializarInventario_conRespuesta5xx_deberiaLanzarInventarioNoDisponibleException() {
         mockServer.expect(requestTo("http://inventario.test/api/inventarios/producto/3"))
+                .andExpect(method(HttpMethod.POST))
                 .andRespond(withStatus(HttpStatus.INTERNAL_SERVER_ERROR));
 
         assertThatThrownBy(() -> client.inicializarInventario(3L))
                 .isInstanceOf(InventarioNoDisponibleException.class)
                 .hasMessageContaining("El inventario devolvió error de servidor (5xx) para el producto 3");
+
+        mockServer.verify();
+    }
+
+    @Test
+    void inicializarInventario_conExcepcionDeRed_deberiaLanzarInventarioNoDisponibleExceptionConCausa() {
+        mockServer.expect(requestTo("http://inventario.test/api/inventarios/producto/4"))
+                .andExpect(method(HttpMethod.POST))
+                .andRespond(withException(new IOException("timeout")));
+
+        assertThatThrownBy(() -> client.inicializarInventario(4L))
+                .isInstanceOf(InventarioNoDisponibleException.class)
+                .hasMessageContaining("Error de red")
+                .hasCauseInstanceOf(IOException.class);
 
         mockServer.verify();
     }

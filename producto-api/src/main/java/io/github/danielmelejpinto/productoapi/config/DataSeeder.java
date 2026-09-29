@@ -10,6 +10,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 
+import io.github.danielmelejpinto.productoapi.model.EstadoProducto;
 import io.github.danielmelejpinto.productoapi.model.Producto;
 import io.github.danielmelejpinto.productoapi.repository.ProductoRepository;
 import net.datafaker.Faker;
@@ -34,7 +35,7 @@ public class DataSeeder {
                 Producto producto = new Producto();
                 producto.setNombre(faker.commerce().productName());
                 producto.setPrecio(BigDecimal.valueOf(faker.number().randomDouble(2, 5, 500)));
-                producto.setEstado(io.github.danielmelejpinto.productoapi.model.EstadoProducto.ACTIVO);
+                producto.setEstado(EstadoProducto.ACTIVO);
                 repository.save(producto);
             });
 

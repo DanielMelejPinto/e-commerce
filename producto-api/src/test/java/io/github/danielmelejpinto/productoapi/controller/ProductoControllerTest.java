@@ -2,10 +2,8 @@ package io.github.danielmelejpinto.productoapi.controller;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -22,12 +20,13 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
-import io.github.danielmelejpinto.productoapi.client.InventarioClient;
 
 import com.jayway.jsonpath.JsonPath;
-import io.github.danielmelejpinto.productoapi.repository.ProductoRepository;
-import io.github.danielmelejpinto.productoapi.model.Producto;
+import io.github.danielmelejpinto.productoapi.client.InventarioClient;
+import io.github.danielmelejpinto.productoapi.exception.InventarioNoDisponibleException;
 import io.github.danielmelejpinto.productoapi.model.EstadoProducto;
+import io.github.danielmelejpinto.productoapi.model.Producto;
+import io.github.danielmelejpinto.productoapi.repository.ProductoRepository;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -108,7 +107,7 @@ class ProductoControllerTest {
 
     @Test
     void crear_cuandoInventarioNoResponde_deberiaRetornar503YNoGuardarElProducto() throws Exception {
-        org.mockito.Mockito.doThrow(new io.github.danielmelejpinto.productoapi.exception.InventarioNoDisponibleException("timeout", null))
+        doThrow(new InventarioNoDisponibleException("timeout", null))
                 .when(inventarioClient).inicializarInventario(any());
 
         mockMvc.perform(post(URL)

@@ -1,9 +1,10 @@
 package io.github.danielmelejpinto.inventarioapi.dto;
 
-import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
+
+import io.swagger.v3.oas.annotations.media.Schema;
 
 public record CantidadRequest(
     @Schema(description = "Cantidad de unidades (entre 1 y 100000)", example = "10")

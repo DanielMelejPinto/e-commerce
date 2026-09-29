@@ -2,10 +2,13 @@ package io.github.danielmelejpinto.inventarioapi.service;
 
 import java.time.LocalDateTime;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import io.github.danielmelejpinto.inventarioapi.dto.InventarioResponse;
+import io.github.danielmelejpinto.inventarioapi.dto.ResultadoInicializacion;
 import io.github.danielmelejpinto.inventarioapi.exception.InventarioNoEncontradoException;
 import io.github.danielmelejpinto.inventarioapi.exception.StockInsuficienteException;
 import io.github.danielmelejpinto.inventarioapi.model.Inventario;
@@ -28,20 +31,20 @@ public class InventarioService {
     // Se usa Propagation.NEVER para que la excepción de unicidad (DataIntegrityViolationException)
     // que ocurre en repository.save no marque la transacción externa como rollback-only.
     // El repositorio en sí mismo maneja sus propias transacciones internas para cada método.
-    @org.springframework.transaction.annotation.Transactional(propagation = org.springframework.transaction.annotation.Propagation.NEVER)
-    public io.github.danielmelejpinto.inventarioapi.dto.ResultadoInicializacion inicializarInventario(Long productoId) {
+    @Transactional(propagation = Propagation.NEVER)
+    public ResultadoInicializacion inicializarInventario(Long productoId) {
         return repository.findByProductoId(productoId)
-                .map(inv -> new io.github.danielmelejpinto.inventarioapi.dto.ResultadoInicializacion(mapearAResponse(inv), false))
+                .map(inv -> new ResultadoInicializacion(mapearAResponse(inv), false))
                 .orElseGet(() -> {
                     try {
                         Inventario nuevo = repository.save(crearVacio(productoId));
-                        return new io.github.danielmelejpinto.inventarioapi.dto.ResultadoInicializacion(mapearAResponse(nuevo), true);
-                    } catch (org.springframework.dao.DataIntegrityViolationException e) {
+                        return new ResultadoInicializacion(mapearAResponse(nuevo), true);
+                    } catch (DataIntegrityViolationException e) {
                         // Otro hilo o proceso ganó la carrera y lo creó primero.
                         // Volvemos a buscarlo (ya debería estar)
                         Inventario existente = repository.findByProductoId(productoId)
                                 .orElseThrow(() -> new IllegalStateException("Se esperaba encontrar el inventario tras colisión, pero no está", e));
-                        return new io.github.danielmelejpinto.inventarioapi.dto.ResultadoInicializacion(mapearAResponse(existente), false);
+                        return new ResultadoInicializacion(mapearAResponse(existente), false);
                     }
                 });
     }

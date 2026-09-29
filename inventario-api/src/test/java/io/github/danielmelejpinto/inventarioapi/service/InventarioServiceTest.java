@@ -17,6 +17,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import io.github.danielmelejpinto.inventarioapi.dto.InventarioResponse;
+import io.github.danielmelejpinto.inventarioapi.dto.ResultadoInicializacion;
 import io.github.danielmelejpinto.inventarioapi.exception.InventarioNoEncontradoException;
 import io.github.danielmelejpinto.inventarioapi.exception.StockInsuficienteException;
 import io.github.danielmelejpinto.inventarioapi.model.Inventario;
@@ -65,7 +66,7 @@ class InventarioServiceTest {
         when(repository.findByProductoId(productoId)).thenReturn(Optional.empty());
         when(repository.save(any(Inventario.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        io.github.danielmelejpinto.inventarioapi.dto.ResultadoInicializacion resultado = service.inicializarInventario(productoId);
+        ResultadoInicializacion resultado = service.inicializarInventario(productoId);
         InventarioResponse response = resultado.inventario();
 
         assertThat(resultado.creado()).isTrue();
@@ -85,7 +86,7 @@ class InventarioServiceTest {
         
         when(repository.findByProductoId(productoId)).thenReturn(Optional.of(inventario));
 
-        io.github.danielmelejpinto.inventarioapi.dto.ResultadoInicializacion resultado = service.inicializarInventario(productoId);
+        ResultadoInicializacion resultado = service.inicializarInventario(productoId);
         InventarioResponse response = resultado.inventario();
 
         assertThat(resultado.creado()).isFalse();

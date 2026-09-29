@@ -5,11 +5,12 @@ import java.time.LocalDateTime;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
-
 import jakarta.persistence.Version;
 
 @Entity
@@ -31,7 +32,7 @@ public class Producto {
     @Column(nullable = false, updatable = false)
     private LocalDateTime fechaCreacion;
 
-    @jakarta.persistence.Enumerated(jakarta.persistence.EnumType.STRING)
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false, columnDefinition = "varchar(20) default 'ACTIVO'")
     private EstadoProducto estado = EstadoProducto.PENDIENTE;
 

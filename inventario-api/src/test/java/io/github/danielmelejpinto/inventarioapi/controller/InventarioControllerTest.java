@@ -9,9 +9,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -37,10 +44,10 @@ class InventarioControllerTest {
     @Test
     void obtener_conInventarioExistente_deberiaRetornar200() throws Exception {
         Long productoId = NEXT_ID.getAndIncrement();
-        
+
         mockMvc.perform(post("/api/inventarios/producto/{id}", productoId))
                 .andExpect(status().isCreated());
-                
+
         mockMvc.perform(get("/api/inventarios/producto/{id}", productoId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.productoId").value(productoId))
@@ -51,7 +58,7 @@ class InventarioControllerTest {
     @Test
     void obtener_sinInventario_deberiaRetornar404() throws Exception {
         Long productoId = NEXT_ID.getAndIncrement();
-        
+
         mockMvc.perform(get("/api/inventarios/producto/{id}", productoId))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error").value("No existe inventario para el producto con id " + productoId));
@@ -66,7 +73,7 @@ class InventarioControllerTest {
     @Test
     void inicializar_primeraVez_deberiaRetornar201YLuego200ManteniendoStock() throws Exception {
         Long productoId = NEXT_ID.getAndIncrement();
-        
+
         // a) primera llamada -> 201
         mockMvc.perform(post("/api/inventarios/producto/{id}", productoId))
                 .andExpect(status().isCreated())
@@ -74,13 +81,13 @@ class InventarioControllerTest {
                 .andExpect(jsonPath("$.cantidadDisponible").value(0))
                 .andExpect(jsonPath("$.cantidadReservada").value(0))
                 .andExpect(header().exists("Location"));
-                
+
         // Agregar stock
         mockMvc.perform(put("/api/inventarios/producto/{id}/agregar", productoId)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"cantidad\": 5}"))
                 .andExpect(status().isOk());
-                
+
         // b) segunda llamada -> 200, conservando el stock intacto
         mockMvc.perform(post("/api/inventarios/producto/{id}", productoId))
                 .andExpect(status().isOk())
@@ -92,16 +99,16 @@ class InventarioControllerTest {
     @Test
     void concurrencia_variosHilosLlamandoInicializar_deberiaCrearSoloUnoYRestaSer200() throws Exception {
         Long productoId = NEXT_ID.getAndIncrement();
-        
+
         int nThreads = 5;
-        java.util.concurrent.ExecutorService executor = java.util.concurrent.Executors.newFixedThreadPool(nThreads);
-        java.util.concurrent.CountDownLatch latch = new java.util.concurrent.CountDownLatch(1);
-        
-        java.util.List<java.util.concurrent.Future<Integer>> futures = new java.util.ArrayList<>();
+        ExecutorService executor = Executors.newFixedThreadPool(nThreads);
+        CountDownLatch latch = new CountDownLatch(1);
+
+        List<Future<Integer>> futures = new ArrayList<>();
 
         for (int i = 0; i < nThreads; i++) {
             futures.add(executor.submit(() -> {
-                if (!latch.await(5, java.util.concurrent.TimeUnit.SECONDS)) {
+                if (!latch.await(5, TimeUnit.SECONDS)) {
                     throw new IllegalStateException("Timeout esperando latch");
                 }
                 MvcResult result = mockMvc.perform(post("/api/inventarios/producto/{id}", productoId))
@@ -111,22 +118,22 @@ class InventarioControllerTest {
         }
 
         latch.countDown();
-        
+
         int status201 = 0;
         int status200 = 0;
-        
-        for (java.util.concurrent.Future<Integer> future : futures) {
-            int status = future.get(10, java.util.concurrent.TimeUnit.SECONDS);
+
+        for (Future<Integer> future : futures) {
+            int status = future.get(10, TimeUnit.SECONDS);
             if (status == 201) status201++;
             if (status == 200) status200++;
         }
-        
-        executor.shutdown();
-        executor.awaitTermination(5, java.util.concurrent.TimeUnit.SECONDS);
 
-        org.assertj.core.api.Assertions.assertThat(status201).isEqualTo(1);
-        org.assertj.core.api.Assertions.assertThat(status200).isEqualTo(nThreads - 1);
-        
+        executor.shutdown();
+        executor.awaitTermination(5, TimeUnit.SECONDS);
+
+        assertThat(status201).isEqualTo(1);
+        assertThat(status200).isEqualTo(nThreads - 1);
+
         // Verificar que hay uno solo y con 0 stock
         mockMvc.perform(get("/api/inventarios/producto/{id}", productoId))
                 .andExpect(status().isOk())
@@ -136,16 +143,16 @@ class InventarioControllerTest {
     @Test
     void agregar_conDatosValidos_deberiaRetornar200YSumarAcumulativamente() throws Exception {
         Long productoId = NEXT_ID.getAndIncrement();
-        
+
         mockMvc.perform(post("/api/inventarios/producto/{id}", productoId))
                 .andExpect(status().isCreated());
-                
+
         mockMvc.perform(put("/api/inventarios/producto/{id}/agregar", productoId)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"cantidad\": 5}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.cantidadDisponible").value(5));
-                
+
         mockMvc.perform(put("/api/inventarios/producto/{id}/agregar", productoId)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"cantidad\": 10}"))
@@ -156,31 +163,31 @@ class InventarioControllerTest {
     @Test
     void agregar_conCantidadesInvalidas_deberiaRetornar400() throws Exception {
         Long productoId = NEXT_ID.getAndIncrement();
-        
+
         mockMvc.perform(put("/api/inventarios/producto/{id}/agregar", productoId)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"cantidad\": 0}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.cantidad").value("La cantidad debe ser mayor a cero"));
-                
+
         mockMvc.perform(put("/api/inventarios/producto/{id}/agregar", productoId)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"cantidad\": -5}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.cantidad").value("La cantidad debe ser mayor a cero"));
-                
+
         mockMvc.perform(put("/api/inventarios/producto/{id}/agregar", productoId)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.cantidad").value("La cantidad es obligatoria"));
-                
+
         mockMvc.perform(put("/api/inventarios/producto/{id}/agregar", productoId)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"cantidad\": 100001}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.cantidad").value("La cantidad no puede superar 100000 unidades por operación"));
-                
+
         mockMvc.perform(put("/api/inventarios/producto/{id}/agregar", productoId)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"cantidad\": \"no-numero\"}"))
@@ -190,7 +197,7 @@ class InventarioControllerTest {
     @Test
     void agregar_sinInventario_deberiaRetornar404() throws Exception {
         Long productoId = NEXT_ID.getAndIncrement();
-        
+
         mockMvc.perform(put("/api/inventarios/producto/{id}/agregar", productoId)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"cantidad\": 5}"))
@@ -200,12 +207,12 @@ class InventarioControllerTest {
     @Test
     void reservar_conStockSuficiente_deberiaMoverStockYRetornar200() throws Exception {
         Long productoId = NEXT_ID.getAndIncrement();
-        
+
         mockMvc.perform(post("/api/inventarios/producto/{id}", productoId));
         mockMvc.perform(put("/api/inventarios/producto/{id}/agregar", productoId)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"cantidad\": 10}"));
-                
+
         mockMvc.perform(put("/api/inventarios/producto/{id}/reservar", productoId)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"cantidad\": 3}"))
@@ -217,12 +224,12 @@ class InventarioControllerTest {
     @Test
     void reservar_conStockInsuficiente_deberiaRetornar409() throws Exception {
         Long productoId = NEXT_ID.getAndIncrement();
-        
+
         mockMvc.perform(post("/api/inventarios/producto/{id}", productoId));
         mockMvc.perform(put("/api/inventarios/producto/{id}/agregar", productoId)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"cantidad\": 5}"));
-                
+
         mockMvc.perform(put("/api/inventarios/producto/{id}/reservar", productoId)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"cantidad\": 10}"))
@@ -233,7 +240,7 @@ class InventarioControllerTest {
     @Test
     void reservar_conCantidadInvalida_deberiaRetornar400() throws Exception {
         Long productoId = NEXT_ID.getAndIncrement();
-        
+
         mockMvc.perform(put("/api/inventarios/producto/{id}/reservar", productoId)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"cantidad\": -1}"))
@@ -243,7 +250,7 @@ class InventarioControllerTest {
     @Test
     void reservar_sinInventario_deberiaRetornar404() throws Exception {
         Long productoId = NEXT_ID.getAndIncrement();
-        
+
         mockMvc.perform(put("/api/inventarios/producto/{id}/reservar", productoId)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"cantidad\": 5}"))
@@ -253,12 +260,12 @@ class InventarioControllerTest {
     @Test
     void eliminar_deberiaRetornar204YBorrarElInventarioSiExiste() throws Exception {
         Long productoId = NEXT_ID.getAndIncrement();
-        
+
         mockMvc.perform(post("/api/inventarios/producto/{id}", productoId));
-        
+
         mockMvc.perform(delete("/api/inventarios/producto/{id}", productoId))
                 .andExpect(status().isNoContent());
-                
+
         mockMvc.perform(get("/api/inventarios/producto/{id}", productoId))
                 .andExpect(status().isNotFound());
     }
@@ -266,7 +273,7 @@ class InventarioControllerTest {
     @Test
     void eliminar_sinInventario_deberiaRetornar204() throws Exception {
         Long productoId = NEXT_ID.getAndIncrement();
-        
+
         mockMvc.perform(delete("/api/inventarios/producto/{id}", productoId))
                 .andExpect(status().isNoContent());
     }
@@ -274,7 +281,7 @@ class InventarioControllerTest {
     @Test
     void concurrencia_dosReservasSimultaneasSobreStockUno_deberiaPermitirSoloUnaYLaOtraLanzar409() throws Exception {
         Long productoId = NEXT_ID.getAndIncrement();
-        
+
         mockMvc.perform(post("/api/inventarios/producto/{id}", productoId));
         mockMvc.perform(put("/api/inventarios/producto/{id}/agregar", productoId)
                 .contentType(MediaType.APPLICATION_JSON)
@@ -287,17 +294,17 @@ class InventarioControllerTest {
         AtomicInteger status200 = new AtomicInteger(0);
         AtomicInteger status409 = new AtomicInteger(0);
 
-        java.util.List<java.util.concurrent.Future<Void>> futures = new java.util.ArrayList<>();
+        List<Future<Void>> futures = new ArrayList<>();
         Runnable task = () -> {
             try {
-                if (!latch.await(5, java.util.concurrent.TimeUnit.SECONDS)) {
+                if (!latch.await(5, TimeUnit.SECONDS)) {
                     throw new IllegalStateException("Timeout esperando latch");
                 }
                 MvcResult result = mockMvc.perform(put("/api/inventarios/producto/{id}/reservar", productoId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"cantidad\": 1}"))
                         .andReturn();
-                        
+
                 int status = result.getResponse().getStatus();
                 if (status == 200) status200.incrementAndGet();
                 if (status == 409) status409.incrementAndGet();
@@ -312,12 +319,12 @@ class InventarioControllerTest {
         futures.add(executor.submit(task, null));
 
         latch.countDown();
-        endLatch.await(5, java.util.concurrent.TimeUnit.SECONDS);
+        endLatch.await(5, TimeUnit.SECONDS);
         executor.shutdown();
-        executor.awaitTermination(5, java.util.concurrent.TimeUnit.SECONDS);
+        executor.awaitTermination(5, TimeUnit.SECONDS);
 
         // Fail if any task threw exception
-        for (java.util.concurrent.Future<Void> future : futures) {
+        for (Future<Void> future : futures) {
             future.get();
         }
 

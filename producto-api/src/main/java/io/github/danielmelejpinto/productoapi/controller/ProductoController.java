@@ -2,6 +2,8 @@ package io.github.danielmelejpinto.productoapi.controller;
 
 import java.net.URI;
 
+import jakarta.validation.Valid;
+
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.data.web.PagedModel;
@@ -22,7 +24,6 @@ import io.github.danielmelejpinto.productoapi.service.ProductoService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/productos")

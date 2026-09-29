@@ -3,20 +3,20 @@ package io.github.danielmelejpinto.productoapi.service;
 import java.util.List;
 
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import io.github.danielmelejpinto.productoapi.client.InventarioClient;
 import io.github.danielmelejpinto.productoapi.dto.ProductoRequest;
 import io.github.danielmelejpinto.productoapi.dto.ProductoResponse;
 import io.github.danielmelejpinto.productoapi.exception.OrdenamientoInvalidoException;
 import io.github.danielmelejpinto.productoapi.exception.ProductoNoEncontradoException;
+import io.github.danielmelejpinto.productoapi.model.EstadoProducto;
 import io.github.danielmelejpinto.productoapi.model.Producto;
 import io.github.danielmelejpinto.productoapi.repository.ProductoRepository;
-
-import io.github.danielmelejpinto.productoapi.model.EstadoProducto;
-import io.github.danielmelejpinto.productoapi.client.InventarioClient;
 
 @Service
 @Transactional(readOnly = true)
@@ -52,7 +52,7 @@ public class ProductoService {
         
         // Agregar "id" como desempate para paginación estable si no está presente como criterio único principal (siempre lo anexamos)
         Sort sort = pageable.getSort().and(Sort.by("id"));
-        Pageable pageableConId = org.springframework.data.domain.PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
+        Pageable pageableConId = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
         
         return repository.findByEstado(EstadoProducto.ACTIVO, pageableConId).map(this::mapearAResponse);
     }

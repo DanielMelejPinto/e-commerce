@@ -2,6 +2,8 @@ package io.github.danielmelejpinto.inventarioapi.controller;
 
 import java.net.URI;
 
+import jakarta.validation.Valid;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -15,11 +17,11 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import io.github.danielmelejpinto.inventarioapi.dto.CantidadRequest;
 import io.github.danielmelejpinto.inventarioapi.dto.InventarioResponse;
+import io.github.danielmelejpinto.inventarioapi.dto.ResultadoInicializacion;
 import io.github.danielmelejpinto.inventarioapi.service.InventarioService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/inventarios/producto/{productoId}")
@@ -45,7 +47,7 @@ public class InventarioController {
     @ApiResponse(responseCode = "201", description = "Inventario creado, con stock inicial en cero")
     @ApiResponse(responseCode = "200", description = "El inventario ya existía")
     public ResponseEntity<InventarioResponse> inicializar(@PathVariable Long productoId) {
-        io.github.danielmelejpinto.inventarioapi.dto.ResultadoInicializacion resultado = service.inicializarInventario(productoId);
+        ResultadoInicializacion resultado = service.inicializarInventario(productoId);
         if (resultado.creado()) {
             URI location = ServletUriComponentsBuilder.fromCurrentRequest().build().toUri();
             return ResponseEntity.created(location).body(resultado.inventario());

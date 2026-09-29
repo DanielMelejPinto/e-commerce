@@ -2,12 +2,13 @@ package io.github.danielmelejpinto.productoapi.dto;
 
 import java.math.BigDecimal;
 
-import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
+
+import io.swagger.v3.oas.annotations.media.Schema;
 
 public record ProductoRequest(
         @Schema(description = "Nombre del producto", example = "Teclado mecánico")

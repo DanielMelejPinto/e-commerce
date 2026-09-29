@@ -3,7 +3,6 @@ package io.github.danielmelejpinto.productoapi.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -25,17 +24,15 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.web.client.RestTemplate;
 
+import io.github.danielmelejpinto.productoapi.client.InventarioClient;
 import io.github.danielmelejpinto.productoapi.dto.ProductoRequest;
 import io.github.danielmelejpinto.productoapi.dto.ProductoResponse;
 import io.github.danielmelejpinto.productoapi.exception.OrdenamientoInvalidoException;
 import io.github.danielmelejpinto.productoapi.exception.ProductoNoEncontradoException;
+import io.github.danielmelejpinto.productoapi.model.EstadoProducto;
 import io.github.danielmelejpinto.productoapi.model.Producto;
 import io.github.danielmelejpinto.productoapi.repository.ProductoRepository;
-import io.github.danielmelejpinto.productoapi.model.EstadoProducto;
-
-import io.github.danielmelejpinto.productoapi.client.InventarioClient;
 
 // MockitoExtension activa los mocks sin levantar Spring
 @ExtendWith(MockitoExtension.class)
@@ -67,7 +64,7 @@ class ProductoServiceTest {
         producto.setEstado(estado);
         return producto;
     }
-    
+
     private Producto crearEntidad(Long id, String nombre, String precio) {
         return crearEntidad(id, nombre, precio, EstadoProducto.ACTIVO);
     }
@@ -130,7 +127,7 @@ class ProductoServiceTest {
         Pageable pageable = PageRequest.of(0, 10);
         Sort sortId = pageable.getSort().and(Sort.by("id"));
         Pageable expectedPageable = PageRequest.of(0, 10, sortId);
-        
+
         when(repository.findByEstado(eq(EstadoProducto.ACTIVO), eq(expectedPageable))).thenReturn(new PageImpl<>(List.of(
                 crearEntidad(1L, "Mouse", "25.00"),
                 crearEntidad(2L, "Teclado", "50.00")), expectedPageable, 2));
@@ -244,7 +241,7 @@ class ProductoServiceTest {
 
         assertThat(existente.getEstado()).isEqualTo(EstadoProducto.BAJA);
         verify(repository, never()).delete(any());
-        
+
     }
 
     @Test
@@ -254,9 +251,9 @@ class ProductoServiceTest {
 
         assertThatThrownBy(() -> service.eliminar(1L))
                 .isInstanceOf(ProductoNoEncontradoException.class);
-                
+
         verify(repository, never()).delete(any());
-        
+
     }
 
     @Test
@@ -266,6 +263,6 @@ class ProductoServiceTest {
         assertThatThrownBy(() -> service.eliminar(99L))
                 .isInstanceOf(ProductoNoEncontradoException.class);
         verify(repository, never()).delete(any());
-        
+
     }
 }
