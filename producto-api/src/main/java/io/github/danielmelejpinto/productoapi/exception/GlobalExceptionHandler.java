@@ -57,13 +57,6 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", ex.getMessage()));
     }
 
-        // 6b. Inventario rechazo (4xx)
-    @ExceptionHandler(InventarioRechazoException.class)
-    public ResponseEntity<Map<String, String>> manejarInventarioRechazo(InventarioRechazoException ex) {
-        log.error("Rechazo de inventario-api", ex);
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", ex.getMessage()));
-    }
-
     // 7. Concurrencia
     @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
     public ResponseEntity<Map<String, String>> manejarConcurrencia(ObjectOptimisticLockingFailureException ex) {

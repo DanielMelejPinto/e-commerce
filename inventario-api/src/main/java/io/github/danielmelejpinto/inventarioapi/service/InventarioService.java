@@ -28,11 +28,7 @@ public class InventarioService {
         return mapearAResponse(buscar(productoId));
     }
 
-    // Se usa Propagation.NEVER para que la excepción de unicidad (DataIntegrityViolationException)
-    // que ocurre en repository.save no marque la transacción externa como rollback-only.
-    // El repositorio en sí mismo maneja sus propias transacciones internas para cada método.
-    // IMPORTANTE: Este método no debe llamarse dentro de otra transacción para poder atrapar la DataIntegrityViolationException correctamente.
-    // propagation = NEVER indica que este método no puede llamarse desde dentro de otra transacción, para que la captura del DataIntegrityViolationException funcione correctamente y aislarlo de la Tx superior.
+    // propagation = NEVER evita que este método corra dentro de una transacción activa. Esto nos permite capturar el DataIntegrityViolationException de Hibernate sin que la transacción superior se marque irremediablemente como rollback-only, logrando así un insert seguro y verdaderamente idempotente ante hilos concurrentes.
     @Transactional(propagation = Propagation.NEVER)
     public ResultadoInicializacion inicializarInventario(Long productoId) {
         return repository.findByProductoId(productoId)
