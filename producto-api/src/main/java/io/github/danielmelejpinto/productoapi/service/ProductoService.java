@@ -7,6 +7,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestTemplate; // NUEVO: Import de RestTemplate
 
 import io.github.danielmelejpinto.productoapi.dto.ProductoRequest;
 import io.github.danielmelejpinto.productoapi.dto.ProductoResponse;
@@ -19,13 +20,15 @@ import io.github.danielmelejpinto.productoapi.repository.ProductoRepository;
 @Transactional(readOnly = true)
 public class ProductoService {
 
-    // Solo se permite ordenar por estos campos: no exponemos nada más de la entidad
     private static final List<String> CAMPOS_ORDENABLES = List.of("id", "nombre", "precio", "fechaCreacion");
 
     private final ProductoRepository repository;
+    private final RestTemplate restTemplate; // NUEVO: Variable declarada
 
-    public ProductoService(ProductoRepository repository) {
+    // NUEVO: Constructor actualizado para inyectar RestTemplate
+    public ProductoService(ProductoRepository repository, RestTemplate restTemplate) {
         this.repository = repository;
+        this.restTemplate = restTemplate;
     }
 
     @Transactional
@@ -33,7 +36,15 @@ public class ProductoService {
         Producto producto = new Producto();
         producto.setNombre(request.getNombre());
         producto.setPrecio(request.getPrecio());
-        return mapearAResponse(repository.save(producto));
+        
+        // NUEVO: Guardamos el producto y capturamos la entidad guardada
+        Producto productoGuardado = repository.save(producto);
+        
+        // NUEVO: Hacemos la llamada al otro microservicio
+        String url = "http://localhost:8081/api/inventarios/producto/" + productoGuardado.getId();
+        restTemplate.postForObject(url, null, Void.class);
+        
+        return mapearAResponse(productoGuardado);
     }
 
     public Page<ProductoResponse> obtenerTodos(Pageable pageable) {
@@ -51,7 +62,6 @@ public class ProductoService {
         producto.setNombre(request.getNombre());
         producto.setPrecio(request.getPrecio());
         // No hace falta repository.save(): la entidad está gestionada por JPA
-        // y los cambios se persisten al cerrar la transacción
         return mapearAResponse(producto);
     }
 
