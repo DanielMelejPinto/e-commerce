@@ -352,4 +352,19 @@ class ProductoControllerTest {
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error").value("Producto con id 999999 no existe"));
     }
+
+    @Test
+    void eliminar_cuandoInventarioNoResponde_deberiaRetornar503YNoBorrarElProducto() throws Exception {
+        long id = crearProducto("Disco SSD", "150.00");
+        
+        org.mockito.Mockito.doThrow(new org.springframework.web.client.ResourceAccessException("Timeout simulado"))
+                .when(restTemplate).delete(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.any(Object[].class));
+
+        mockMvc.perform(delete(URL + "/" + id))
+                .andExpect(status().isServiceUnavailable());
+
+        // Comprobamos que el producto no se borró
+        mockMvc.perform(get(URL + "/" + id))
+                .andExpect(status().isOk());
+    }
 }

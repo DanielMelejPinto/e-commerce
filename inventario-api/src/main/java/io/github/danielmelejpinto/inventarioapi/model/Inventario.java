@@ -16,17 +16,17 @@ public class Inventario {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long inventarioId;
 
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true)
     private Long productoId;
     
     @Version
     private Long version;
 
     @Column(nullable = false)
-    private Integer cantidadDisponible;
+    private Long cantidadDisponible;
 
     @Column(nullable = false)
-    private Integer cantidadReservada;
+    private Long cantidadReservada;
 
     @Column(nullable = false)
     private LocalDateTime ultimaActualizacion;
@@ -49,19 +49,19 @@ public class Inventario {
         this.productoId = productoId;
     }
 
-    public Integer getCantidadDisponible() {
+    public Long getCantidadDisponible() {
         return cantidadDisponible;
     }
 
-    public void setCantidadDisponible(Integer cantidadDisponible) {
+    public void setCantidadDisponible(Long cantidadDisponible) {
         this.cantidadDisponible = cantidadDisponible;
     }
 
-    public Integer getCantidadReservada() {
+    public Long getCantidadReservada() {
         return cantidadReservada;
     }
 
-    public void setCantidadReservada(Integer cantidadReservada) {
+    public void setCantidadReservada(Long cantidadReservada) {
         this.cantidadReservada = cantidadReservada;
     }
 

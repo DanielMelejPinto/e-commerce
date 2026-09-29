@@ -211,6 +211,7 @@ class ProductoServiceTest {
         service.eliminar(1L);
 
         verify(repository).delete(existente);
+        verify(restTemplate).delete(INVENTARIO_URL + "/api/inventarios/producto/1");
     }
 
     @Test
@@ -220,5 +221,6 @@ class ProductoServiceTest {
         assertThatThrownBy(() -> service.eliminar(99L))
                 .isInstanceOf(ProductoNoEncontradoException.class);
         verify(repository, never()).delete(any());
+        verify(restTemplate, never()).delete(any(String.class));
     }
 }

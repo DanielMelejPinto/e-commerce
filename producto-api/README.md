@@ -125,17 +125,18 @@ Respuesta (`201 Created`, con header `Location` apuntando al nuevo recurso):
 
 ## Integración con inventario-api
 
-Al crear un producto, `producto-api` llama a:
+Al crear o eliminar un producto, `producto-api` llama a:
 
 ```
 POST {inventario.api.url}/api/inventarios/producto/{id}
+DELETE {inventario.api.url}/api/inventarios/producto/{id}
 ```
 
-para que `inventario-api` cree el inventario del nuevo producto (con stock en cero). Detalles a tener en cuenta:
+para que `inventario-api` cree el inventario del nuevo producto (con stock en cero) o lo elimine. Detalles a tener en cuenta:
 
-- La llamada ocurre **dentro de la misma transacción** que el guardado. Si `inventario-api` no responde o falla, se devuelve `503` y el producto **no se guarda** (rollback).
+- La llamada ocurre **dentro de la misma transacción** que el guardado o borrado. Si `inventario-api` no responde o falla, se devuelve `503` y la operación **se revierte** (rollback).
 - Los timeouts son de 2 s para conectar y 5 s para leer la respuesta.
-- Para probar solo los `GET`, `PUT` y `DELETE` no hace falta tener `inventario-api` levantado. Para crear productos sí.
+- Para probar solo los `GET` y `PUT` no hace falta tener `inventario-api` levantado. Para crear o eliminar productos sí.
 - `inventario-api` vive en la carpeta hermana `inventario-api/` de este repositorio y corre en el puerto 8081.
 
 ## Manejo de errores
@@ -205,7 +206,6 @@ src/test/resources/
 
 ## Limitaciones conocidas
 
-- **Eliminar un producto no elimina su inventario** en `inventario-api`, que hoy no expone un `DELETE`. El inventario queda huérfano.
 - **Sin autenticación ni autorización.**
 - Swagger UI y la consola de H2 están habilitados por defecto; el proyecto está pensado para desarrollo local, no para producción tal cual.
 

@@ -10,8 +10,11 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.test.web.servlet.MockMvc;
 
+import org.springframework.test.context.ActiveProfiles;
+
 @SpringBootTest
 @AutoConfigureMockMvc
+@ActiveProfiles("test")
 class DocumentacionApiTest {
 
     @Autowired
@@ -22,8 +25,10 @@ class DocumentacionApiTest {
     void openApi_deberiaGenerarseYDescribirLosEndpointsDeInventario() throws Exception {
         mockMvc.perform(get("/v3/api-docs"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.paths['/api/inventarios/producto/{productoId}']").exists())
-                .andExpect(jsonPath("$.paths['/api/inventarios/producto/{productoId}/agregar']").exists())
-                .andExpect(jsonPath("$.paths['/api/inventarios/producto/{productoId}/reservar']").exists());
+                .andExpect(jsonPath("$.paths['/api/inventarios/producto/{productoId}'].get").exists())
+                .andExpect(jsonPath("$.paths['/api/inventarios/producto/{productoId}'].post").exists())
+                .andExpect(jsonPath("$.paths['/api/inventarios/producto/{productoId}'].delete").exists())
+                .andExpect(jsonPath("$.paths['/api/inventarios/producto/{productoId}/agregar'].put").exists())
+                .andExpect(jsonPath("$.paths['/api/inventarios/producto/{productoId}/reservar'].put").exists());
     }
 }

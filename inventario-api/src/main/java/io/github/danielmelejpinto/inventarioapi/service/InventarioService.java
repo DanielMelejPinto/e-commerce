@@ -57,6 +57,11 @@ public class InventarioService {
         return mapearAResponse(inventario);
     }
 
+    @Transactional
+    public void eliminarInventario(Long productoId) {
+        repository.findByProductoId(productoId).ifPresent(repository::delete);
+    }
+
     private Inventario buscar(Long productoId) {
         return repository.findByProductoId(productoId)
                 .orElseThrow(() -> new InventarioNoEncontradoException(productoId));
@@ -65,18 +70,18 @@ public class InventarioService {
     private Inventario crearVacio(Long productoId) {
         Inventario inventario = new Inventario();
         inventario.setProductoId(productoId);
-        inventario.setCantidadDisponible(0);
-        inventario.setCantidadReservada(0);
+        inventario.setCantidadDisponible(0L);
+        inventario.setCantidadReservada(0L);
         inventario.setUltimaActualizacion(LocalDateTime.now());
         return inventario;
     }
 
     private InventarioResponse mapearAResponse(Inventario inventario) {
-        InventarioResponse response = new InventarioResponse();
-        response.setProductoId(inventario.getProductoId());
-        response.setCantidadDisponible(inventario.getCantidadDisponible());
-        response.setCantidadReservada(inventario.getCantidadReservada());
-        response.setUltimaActualizacion(inventario.getUltimaActualizacion());
-        return response;
+        return new InventarioResponse(
+            inventario.getProductoId(),
+            inventario.getCantidadDisponible(),
+            inventario.getCantidadReservada(),
+            inventario.getUltimaActualizacion()
+        );
     }
 }

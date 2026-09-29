@@ -70,6 +70,9 @@ public class ProductoService {
     @Transactional
     public void eliminar(Long id) {
         repository.delete(buscarEntidadPorId(id));
+        
+        // Si inventario falla se devuelve 503 y el producto no se borra (rollback), igual que en crear()
+        restTemplate.delete(inventarioUrl + "/api/inventarios/producto/" + id);
     }
 
     // --- Métodos privados de apoyo ---

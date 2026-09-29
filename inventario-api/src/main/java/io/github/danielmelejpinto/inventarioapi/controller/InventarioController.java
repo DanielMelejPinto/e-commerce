@@ -49,7 +49,7 @@ public class InventarioController {
     @ApiResponse(responseCode = "404", description = "El producto no tiene inventario")
     public InventarioResponse agregar(@PathVariable Long productoId,
             @Valid @RequestBody CantidadRequest request) {
-        return service.agregarStock(productoId, request.getCantidad());
+        return service.agregarStock(productoId, request.cantidad());
     }
 
     @PutMapping("/reservar")
@@ -60,6 +60,14 @@ public class InventarioController {
     @ApiResponse(responseCode = "409", description = "Stock insuficiente o conflicto de concurrencia")
     public InventarioResponse reservar(@PathVariable Long productoId,
             @Valid @RequestBody CantidadRequest request) {
-        return service.reservarStock(productoId, request.getCantidad());
+        return service.reservarStock(productoId, request.cantidad());
+    }
+
+    @DeleteMapping
+    @Operation(summary = "Eliminar el inventario de un producto")
+    @ApiResponse(responseCode = "204", description = "Inventario eliminado exitosamente (o no existía)")
+    public ResponseEntity<Void> eliminar(@PathVariable Long productoId) {
+        service.eliminarInventario(productoId);
+        return ResponseEntity.noContent().build();
     }
 }
