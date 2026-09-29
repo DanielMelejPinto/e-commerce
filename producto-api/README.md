@@ -96,7 +96,7 @@ http://localhost:8080/swagger-ui.html
 
 | Método   | Ruta                  | Descripción                             | Respuestas                  |
 |----------|-----------------------|-----------------------------------------|-----------------------------|
-| `POST`   | `/api/productos`      | Crear un producto                       | `201`, `400`, `503`         |
+| `POST`   | `/api/productos`      | Crear un producto                       | `201`, `400`                |
 | `GET`    | `/api/productos`      | Listar productos (paginado y ordenable) | `200`, `400`                |
 | `GET`    | `/api/productos/{id}` | Obtener un producto por id              | `200`, `400`, `404`         |
 | `PUT`    | `/api/productos/{id}` | Actualizar un producto                  | `200`, `400`, `404`, `409`  |

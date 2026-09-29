@@ -45,14 +45,13 @@ El estado de salud del servicio se puede consultar en `http://localhost:8081/act
 
 ## Endpoints
 
-| Método   | Ruta                                              | Descripción                             | Respuestas                  |
-|----------|---------------------------------------------------|-----------------------------------------|-----------------------------|
-| `GET`    | `/api/inventarios/producto/{productoId}`          | Consultar el inventario de un producto  | `200`, `400`, `404`         |
-| `POST`   | `/api/inventarios/producto/{id}` | Inicializa stock en 0 para un producto | `200` (existente), `201` (creado) |
-| `GET`    | `/api/inventarios/producto/{id}` | Consulta el stock disponible y reservado | `200`, `404` |
-| `PUT`    | `/api/inventarios/producto/{id}/agregar` | Suma una cantidad al stock disponible | `200`, `400`, `404` |
-| `PUT`    | `/api/inventarios/producto/{id}/reservar` | Mueve stock disponible a reservado | `200`, `400`, `404`, `409` |
-| `DELETE` | `/api/inventarios/producto/{id}` | Elimina el inventario de un producto | `204` | `/api/inventarios/producto/{productoId}`          | Eliminar el inventario (idempotente)    | `204`                       |
+| Método   | Ruta                                     | Descripción                             | Respuestas                  |
+|----------|------------------------------------------|-----------------------------------------|-----------------------------|
+| `POST`   | `/api/inventarios/producto/{id}`         | Inicializa stock en 0 para un producto | `200` (existente), `201` (creado) |
+| `GET`    | `/api/inventarios/producto/{id}`         | Consulta el stock disponible y reservado| `200`, `404`                |
+| `PUT`    | `/api/inventarios/producto/{id}/agregar` | Suma una cantidad al stock disponible   | `200`, `400`, `404`         |
+| `PUT`    | `/api/inventarios/producto/{id}/reservar`| Mueve stock disponible a reservado      | `200`, `400`, `404`, `409`  |
+| `DELETE` | `/api/inventarios/producto/{id}`         | Elimina el inventario de un producto    | `204`                       |
 
 **Validaciones** de `agregar` y `reservar`: `cantidad` obligatoria, mayor a cero y como máximo `100000` por operación.
 
@@ -138,14 +137,10 @@ src/test/resources/
 
 ## Relación con producto-api
 
-`producto-api` usa este servicio en dos momentos:
-
-1. **Al crear un producto:** una vez que el producto quedó **confirmado en su base de datos**, llama a `POST /api/inventarios/producto/{id}` para crear el inventario con stock en cero.
-2. **Al eliminar un producto:** tras confirmar el borrado, llama a `DELETE /api/inventarios/producto/{id}`.
-
-Estas llamadas se hacen **fuera de la transacción de `producto-api`** y se reintentan si fallan, por lo que la consistencia entre ambos servicios es **eventual**: durante un instante (o mientras `inventario-api` esté caído) un producto puede existir sin inventario. Para que los reintentos sean seguros, `POST` y `DELETE` son **idempotentes**.
+`producto-api` usa este servicio principalmente **al crear un producto**: una vez que el producto se guarda localmente (estado PENDIENTE), `producto-api` mediante un patrón Outbox llama a `POST /api/inventarios/producto/{id}` para crear el inventario de forma asíncrona y robusta a fallos de red. Si tiene éxito, el producto pasa a estado ACTIVO.
 
 > Los productos de prueba que `producto-api` genera en su perfil `dev` no pasan por este flujo, así que no tienen inventario.
+
 
 ## Limitaciones conocidas
 
