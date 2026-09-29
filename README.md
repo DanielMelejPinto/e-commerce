@@ -1,9 +1,8 @@
-# E-Commerce · Productos e Inventario
+# E-Commerce · Arquitectura de Microservicios
 
 [![CI](https://github.com/DanielMelejPinto/e-commerce/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/DanielMelejPinto/e-commerce/actions/workflows/ci.yml)
 
-Sistema backend de e-commerce que gestiona catálogo de productos y existencias de inventario.
-Construido con **Java 21 y Spring Boot 4.1.1**, separado en dos microservicios (`producto-api` e `inventario-api`).
+Sistema backend completo de e-commerce. Construido con **Java 21 y Spring Boot 4.1.1**, separado en cuatro microservicios (`producto-api`, `inventario-api`, `usuario-api` y `pedido-api`).
 
 Características principales:
 
@@ -132,6 +131,8 @@ La baja del producto conserva su registro y **no elimina ni bloquea automáticam
 | --- | --- |
 | `producto-api/` | Proyecto Maven del catálogo |
 | `inventario-api/` | Proyecto Maven del inventario |
+| `usuario-api/` | Proyecto Maven de seguridad e identidad (JWT) |
+| `pedido-api/` | Proyecto Maven de órdenes y orquestación de compras |
 | `*/src/main/java/` | Código de las aplicaciones |
 | `*/src/main/resources/` | Configuración de ejecución |
 | `*/src/test/java/` | Pruebas automatizadas |
