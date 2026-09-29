@@ -8,11 +8,13 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 @RestControllerAdvice
@@ -56,7 +58,20 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", ex.getMessage()));
     }
 
-    // 6. Respaldo: cualquier error no previsto. Es el ÚNICO que devuelve 500.
+    // 6. como crear() es transaccional, el producto hace rollback y no queda guardado a medias.
+    @ExceptionHandler(RestClientException.class)
+    public ResponseEntity<Map<String, String>> manejarInventarioNoDisponible(RestClientException ex) {
+        log.error("Fallo al comunicarse con inventario-api", ex);
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(Map.of("error", "Servicio de inventario no disponible, intenta más tarde"));
+    }
+
+    // 7. Concurrencia
+    @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
+    public ResponseEntity<Map<String, String>> manejarConcurrencia(ObjectOptimisticLockingFailureException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", "El producto fue modificado por otra operación, intenta de nuevo"));
+    }
+
+    // 8. Respaldo: cualquier error no previsto. Es el ÚNICO que devuelve 500.
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, String>> manejarErrorInesperado(Exception ex) throws Exception {
         // Excepciones que Spring ya asocia a un código HTTP (404 de ruta inexistente,

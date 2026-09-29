@@ -1,7 +1,11 @@
 package io.github.danielmelejpinto.productoapi.controller;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -14,15 +18,18 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
 import com.jayway.jsonpath.JsonPath;
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@ActiveProfiles("test")
 class ProductoControllerTest {
 
     private static final String URL = "/api/productos";
@@ -88,6 +95,22 @@ class ProductoControllerTest {
 
         String location = resultado.getResponse().getHeader("Location");
         assertEquals("http://localhost" + URL + "/" + id, location);
+    }
+
+    @Test
+    void crear_cuandoInventarioNoResponde_deberiaRetornar503YNoGuardarElProducto() throws Exception {
+        when(restTemplate.postForObject(anyString(), any(), eq(Void.class)))
+                .thenThrow(new ResourceAccessException("timeout"));
+
+        mockMvc.perform(post(URL)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(cuerpo("Fantasma", "10.00")))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.error").value("Servicio de inventario no disponible, intenta más tarde"));
+
+        mockMvc.perform(get(URL).param("sort", "id,desc").param("size", "50"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[?(@.nombre == 'Fantasma')]").isEmpty());
     }
 
     @Test
@@ -263,7 +286,6 @@ class ProductoControllerTest {
     void obtenerPorId_conIdInexistente_deberiaRetornar404() throws Exception {
         mockMvc.perform(get(URL + "/999999"))
                 .andExpect(status().isNotFound())
-                // CAMBIO: el mensaje ahora incluye el id
                 .andExpect(jsonPath("$.error").value("Producto con id 999999 no existe"));
     }
 
@@ -328,7 +350,6 @@ class ProductoControllerTest {
     void eliminar_conIdInexistente_deberiaRetornar404() throws Exception {
         mockMvc.perform(delete(URL + "/999999"))
                 .andExpect(status().isNotFound())
-                // CAMBIO: el mensaje ahora incluye el id
                 .andExpect(jsonPath("$.error").value("Producto con id 999999 no existe"));
     }
 }

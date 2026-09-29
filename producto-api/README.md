@@ -28,6 +28,8 @@ Microservicio REST desarrollado con **Java 21** y **Spring Boot 4** para la gest
 
 No requiere nada más instalado que Java 21 y Maven. Los datos no persisten entre reinicios.
 
+> **Nota:** En el perfil `dev` se cargan 20 productos de prueba con Datafaker; no pasan por POST `/api/productos`, así que no tienen inventario en inventario-api (consultarlo da 404) y es lo esperado.
+
 ```bash
 ./mvnw spring-boot:run
 ```
@@ -108,9 +110,13 @@ O al pedir un producto que no existe (`404 Not Found`):
 
 ```json
 {
-  "error": "Producto con id 99 no encontrado"
+  "error": "Producto con id 99 no existe"
 }
 ```
+
+**Otros errores posibles:**
+- **409 Conflict**: Dos operaciones modificaron el mismo producto a la vez; reintenta.
+- **503 Service Unavailable**: inventario-api no responde. Al crear un producto se avisa a inventario dentro de la misma transacción, así que si falla el producto NO se guarda.
 
 ## Correr los tests
 
@@ -128,7 +134,7 @@ src/main/java/io/github/danielmelejpinto/productoapi/
 ├── model/          # Entidades JPA
 ├── dto/            # Objetos de entrada/salida (Request/Response)
 ├── exception/      # Excepciones personalizadas y manejo global
-└── config/         # Configuración (OpenAPI/Swagger)
+└── config/         # Configuración (OpenAPI/Swagger, RestTemplate con timeouts, seeder de dev)
 ```
 
 ## Autor
