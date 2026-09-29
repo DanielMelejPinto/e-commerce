@@ -18,6 +18,9 @@ import org.springframework.test.web.servlet.MvcResult;
 
 import com.jayway.jsonpath.JsonPath;
 
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.web.client.RestTemplate;
+
 @SpringBootTest
 @AutoConfigureMockMvc
 class ProductoControllerTest {
@@ -26,6 +29,10 @@ class ProductoControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    // Sustituye al RestTemplate real: los tests no dependen de que inventario-api esté corriendo
+    @MockitoBean
+    private RestTemplate restTemplate;
 
     // =============================================
     // Helpers

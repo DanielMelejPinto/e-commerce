@@ -32,12 +32,18 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import io.github.danielmelejpinto.productoapi.exception.OrdenamientoInvalidoException;
 
+import org.springframework.web.client.RestTemplate;
+
 // MockitoExtension activa los mocks sin levantar Spring
 @ExtendWith(MockitoExtension.class)
 class ProductoServiceTest {
 
     @Mock
-    private ProductoRepository repository; // repositorio falso: no toca ninguna base de datos
+    private ProductoRepository repository;
+
+    @Mock
+    private RestTemplate restTemplate; // cliente HTTP falso: no llama a inventario-api
+
 
     @InjectMocks
     private ProductoService service; // Mockito le pasa el mock al constructor

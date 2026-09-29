@@ -15,7 +15,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 
 @RestController
-@RequestMapping("/api/inventarios")
+@RequestMapping("/api/inventarios/producto/{productoId}")
 @Tag(name = "Inventario", description = "Existencias y reservas de stock por producto")
 public class InventarioController {
 
@@ -25,7 +25,7 @@ public class InventarioController {
         this.service = service;
     }
 
-    @GetMapping("/producto/{productoId}")
+    @GetMapping
     @Operation(summary = "Consultar el inventario de un producto")
     @ApiResponse(responseCode = "200", description = "Inventario encontrado")
     @ApiResponse(responseCode = "404", description = "El producto no tiene inventario")
@@ -33,7 +33,7 @@ public class InventarioController {
         return service.obtenerPorProductoId(productoId);
     }
 
-    @PostMapping("/producto/{productoId}")
+    @PostMapping
     @Operation(summary = "Inicializar el inventario de un producto (idempotente)")
     @ApiResponse(responseCode = "201", description = "Inventario listo, con stock inicial en cero")
     public ResponseEntity<InventarioResponse> inicializar(@PathVariable Long productoId) {
@@ -42,7 +42,7 @@ public class InventarioController {
         return ResponseEntity.created(location).body(response);
     }
 
-    @PutMapping("/producto/{productoId}/agregar")
+    @PutMapping("/agregar")
     @Operation(summary = "Agregar stock (ingreso de mercadería)")
     @ApiResponse(responseCode = "200", description = "Stock actualizado")
     @ApiResponse(responseCode = "400", description = "Cantidad inválida")
@@ -52,7 +52,7 @@ public class InventarioController {
         return service.agregarStock(productoId, request.getCantidad());
     }
 
-    @PutMapping("/producto/{productoId}/reservar")
+    @PutMapping("/reservar")
     @Operation(summary = "Reservar stock para una compra")
     @ApiResponse(responseCode = "200", description = "Stock reservado")
     @ApiResponse(responseCode = "400", description = "Cantidad inválida")
