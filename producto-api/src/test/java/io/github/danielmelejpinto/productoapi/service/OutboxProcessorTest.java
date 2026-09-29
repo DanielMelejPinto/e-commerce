@@ -45,6 +45,7 @@ class OutboxProcessorTest {
     @BeforeEach
     void setUp() {
         processor = new OutboxProcessor(eventRepository, productoRepository, inventarioClient);
+        org.springframework.test.util.ReflectionTestUtils.setField(processor, "maxIntentos", 5);
     }
 
     @Test
@@ -126,7 +127,7 @@ class OutboxProcessorTest {
         event.setId(1L);
         event.setProductoId(10L);
         event.setEstado(EstadoEvento.PENDIENTE);
-        event.setIntentos(0);
+        event.setIntentos(0); // Bajo el límite
         
         Producto producto = new Producto();
         producto.setId(10L);
@@ -141,6 +142,31 @@ class OutboxProcessorTest {
         assertThat(producto.getEstado()).isEqualTo(EstadoProducto.PENDIENTE);
         assertThat(event.getEstado()).isEqualTo(EstadoEvento.PENDIENTE);
         assertThat(event.getIntentos()).isEqualTo(1);
+        verify(productoRepository, never()).save(producto);
+        verify(eventRepository).save(event);
+    }
+
+    @Test
+    void procesarEventosPendientes_fallaTemporalSuperaIntentos_deberiaMarcarError() {
+        OutboxEvent event = new OutboxEvent();
+        event.setId(1L);
+        event.setProductoId(10L);
+        event.setEstado(EstadoEvento.PENDIENTE);
+        event.setIntentos(4); // Almacenará el intento 5 y llegará al límite de 5
+        
+        Producto producto = new Producto();
+        producto.setId(10L);
+        producto.setEstado(EstadoProducto.PENDIENTE);
+
+        when(eventRepository.findByEstado(EstadoEvento.PENDIENTE)).thenReturn(List.of(event));
+        when(productoRepository.findById(10L)).thenReturn(Optional.of(producto));
+        doThrow(new InventarioNoDisponibleException("5xx", null)).when(inventarioClient).inicializarInventario(10L);
+
+        processor.procesarEventosPendientes();
+
+        assertThat(producto.getEstado()).isEqualTo(EstadoProducto.PENDIENTE);
+        assertThat(event.getEstado()).isEqualTo(EstadoEvento.ERROR);
+        assertThat(event.getIntentos()).isEqualTo(5);
         verify(productoRepository, never()).save(producto);
         verify(eventRepository).save(event);
     }

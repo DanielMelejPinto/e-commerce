@@ -379,6 +379,7 @@ Inventario no incluye un perfil `docker` propio. La presencia del driver Postgre
 | `inventario.api.url` / `INVENTARIO_API_URL` | `http://localhost:8081` | Dirección de inventario |
 | `inventario.api.connect-timeout-ms` | `2000` | Timeout de conexión |
 | `inventario.api.read-timeout-ms` | `5000` | Timeout de lectura |
+| `outbox.max-intentos` | `5` | Límite de reintentos para eventos fallidos del Outbox |
 | `spring.data.web.pageable.max-page-size` | `50` | Límite de paginación |
 | `POSTGRES_HOST` | `localhost` | Host de PostgreSQL en el perfil `docker` |
 | `POSTGRES_DB` | `productodb` | Nombre de base de datos |
@@ -475,7 +476,7 @@ El código actual permite practicar integración entre servicios, pero todavía 
 | --- | --- | --- |
 | Acceso a las APIs | Endpoints sin autenticación ni autorización | Incorporar identidad, roles y protección de operaciones de escritura |
 | Finalización del Outbox | Producto y evento se guardan por separado; el evento no tiene bloqueo ni versión | Hacer atómica la actualización local final y coordinar el procesamiento entre instancias |
-| Reintentos | Consulta todos los pendientes; sin espera progresiva, límite de intentos ni administración de errores | Procesar por lotes, definir reintentos y habilitar diagnóstico y reproceso |
+| Reintentos | Límite de intentos implementado (5 por defecto), pero consulta todos los pendientes y sin espera progresiva | Procesar por lotes, implementar espera progresiva y habilitar reproceso manual |
 | Clasificación HTTP | Todos los `4xx` del inventario se consideran permanentes | Distinguir errores de contrato de respuestas recuperables como `429` |
 | Persistencia de inventario | H2 en ejecución local; PostgreSQL en determinadas pruebas | Añadir configuración persistente y un entorno reproducible para ambos servicios |
 | Stock y estado del catálogo | Inventario no comprueba la existencia ni el estado del producto | Definir y aplicar reglas entre ambos dominios |

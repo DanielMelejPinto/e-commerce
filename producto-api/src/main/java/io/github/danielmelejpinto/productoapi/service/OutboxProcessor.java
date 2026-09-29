@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -24,6 +25,9 @@ public class OutboxProcessor {
     private final OutboxEventRepository eventRepository;
     private final ProductoRepository productoRepository;
     private final InventarioClient inventarioClient;
+
+    @Value("${outbox.max-intentos:5}")
+    private int maxIntentos;
 
     public OutboxProcessor(OutboxEventRepository eventRepository, ProductoRepository productoRepository, InventarioClient inventarioClient) {
         this.eventRepository = eventRepository;
@@ -73,7 +77,12 @@ public class OutboxProcessor {
             } catch (Exception e) {
                 // 5xx o timeout: Reintentar
                 event.setIntentos(event.getIntentos() + 1);
-                log.warn("Fallo recuperable en evento {} del producto {}. Intentos: {}. Error: {}", event.getId(), producto.getId(), event.getIntentos(), e.getMessage());
+                if (event.getIntentos() >= maxIntentos) {
+                    log.error("Evento {} alcanzó el máximo de intentos ({}). Producto: {}. Marcando ERROR.", event.getId(), maxIntentos, producto.getId());
+                    event.setEstado(EstadoEvento.ERROR);
+                } else {
+                    log.warn("Fallo recuperable en evento {} del producto {}. Intentos: {}. Error: {}", event.getId(), producto.getId(), event.getIntentos(), e.getMessage());
+                }
                 eventRepository.save(event);
             }
         }
