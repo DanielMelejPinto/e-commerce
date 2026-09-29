@@ -1,10 +1,19 @@
 {
   "properties": [
     {
+      "name": "seguridad.jwt.secret",
+      "type": "java.lang.String",
+      "description": "Clave secreta para firmar los tokens JWT."
+    },
+    {
+      "name": "seguridad.jwt.expiration-ms",
+      "type": "java.lang.Long",
+      "description": "Tiempo de expiración del token JWT en milisegundos."
+    },
+    {
       "name": "seguridad.bcrypt-cost",
       "type": "java.lang.Integer",
-      "description": "Costo de BCrypt (4 a 31). Cada +1 duplica el tiempo de hash.",
-      "defaultValue": 12
+      "description": "Costo del algoritmo BCrypt (default: 12)."
     }
   ]
 }

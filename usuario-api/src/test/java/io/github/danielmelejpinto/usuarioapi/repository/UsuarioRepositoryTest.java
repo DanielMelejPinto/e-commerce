@@ -96,6 +96,6 @@ class UsuarioRepositoryTest {
 
         Page<Usuario> pagina = repository.findByEstado(EstadoUsuario.ACTIVO, PageRequest.of(0, 10));
 
-        assertThat(pagina.getContent()).extracting(Usuario::getEmail).containsExactly("activo@mail.com");
+        assertThat(pagina.getContent()).extracting(u -> u.getEmail()).containsExactly("activo@mail.com");
     }
 }
