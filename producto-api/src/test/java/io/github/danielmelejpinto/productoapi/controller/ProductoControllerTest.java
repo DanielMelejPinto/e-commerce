@@ -1,6 +1,7 @@
 package io.github.danielmelejpinto.productoapi.controller;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -13,13 +14,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.web.client.RestTemplate;
 
 import com.jayway.jsonpath.JsonPath;
-
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.web.client.RestTemplate;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -30,7 +30,8 @@ class ProductoControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    // Sustituye al RestTemplate real: los tests no dependen de que inventario-api esté corriendo
+    // Sustituye al RestTemplate real: los tests no dependen de que inventario-api
+    // esté corriendo
     @MockitoBean
     private RestTemplate restTemplate;
 
@@ -197,6 +198,14 @@ class ProductoControllerTest {
         mockMvc.perform(get(URL).param("sort", "id,desc"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[?(@.nombre == 'Mouse')]").exists());
+    }
+
+    @Test
+    void crear_deberiaAvisarAInventarioConLaUrlDelNuevoProducto() throws Exception {
+        long id = crearProducto("Teclado", "50.00");
+
+        verify(restTemplate).postForObject(
+                "http://localhost:8081/api/inventarios/producto/" + id, null, Void.class);
     }
 
     @Test

@@ -12,31 +12,31 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import io.github.danielmelejpinto.productoapi.dto.ProductoRequest;
-import io.github.danielmelejpinto.productoapi.dto.ProductoResponse;
-import io.github.danielmelejpinto.productoapi.exception.ProductoNoEncontradoException;
-import io.github.danielmelejpinto.productoapi.model.Producto;
-import io.github.danielmelejpinto.productoapi.repository.ProductoRepository;
-
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import io.github.danielmelejpinto.productoapi.exception.OrdenamientoInvalidoException;
-
 import org.springframework.web.client.RestTemplate;
+
+import io.github.danielmelejpinto.productoapi.dto.ProductoRequest;
+import io.github.danielmelejpinto.productoapi.dto.ProductoResponse;
+import io.github.danielmelejpinto.productoapi.exception.OrdenamientoInvalidoException;
+import io.github.danielmelejpinto.productoapi.exception.ProductoNoEncontradoException;
+import io.github.danielmelejpinto.productoapi.model.Producto;
+import io.github.danielmelejpinto.productoapi.repository.ProductoRepository;
 
 // MockitoExtension activa los mocks sin levantar Spring
 @ExtendWith(MockitoExtension.class)
 class ProductoServiceTest {
+
+    private static final String INVENTARIO_URL = "http://inventario-test:8081";
 
     @Mock
     private ProductoRepository repository;
@@ -44,9 +44,13 @@ class ProductoServiceTest {
     @Mock
     private RestTemplate restTemplate; // cliente HTTP falso: no llama a inventario-api
 
+    private ProductoService service;
 
-    @InjectMocks
-    private ProductoService service; // Mockito le pasa el mock al constructor
+    @BeforeEach
+    void setUp() {
+        // Se construye a mano para poder pasarle la URL de inventario
+        service = new ProductoService(repository, restTemplate, INVENTARIO_URL);
+    }
 
     // =============================================
     // Helpers
@@ -62,10 +66,7 @@ class ProductoServiceTest {
     }
 
     private ProductoRequest crearRequest(String nombre, String precio) {
-        ProductoRequest request = new ProductoRequest();
-        request.setNombre(nombre);
-        request.setPrecio(new BigDecimal(precio));
-        return request;
+        return new ProductoRequest(nombre, new BigDecimal(precio));
     }
 
     // =============================================
@@ -91,10 +92,25 @@ class ProductoServiceTest {
         assertThat(captor.getValue().getPrecio()).isEqualByComparingTo("50.00");
 
         // Verificamos lo que devuelve el service
-        assertThat(response.getId()).isEqualTo(1L);
-        assertThat(response.getNombre()).isEqualTo("Teclado");
-        assertThat(response.getPrecio()).isEqualByComparingTo("50.00");
-        assertThat(response.getFechaCreacion()).isNotNull();
+        assertThat(response.id()).isEqualTo(1L);
+        assertThat(response.nombre()).isEqualTo("Teclado");
+        assertThat(response.precio()).isEqualByComparingTo("50.00");
+        assertThat(response.fechaCreacion()).isNotNull();
+    }
+
+    @Test
+    void crear_deberiaAvisarAInventarioConLaUrlDelNuevoProducto() {
+        when(repository.save(any(Producto.class))).thenAnswer(invocacion -> {
+            Producto p = invocacion.getArgument(0);
+            p.setId(7L);
+            p.setFechaCreacion(LocalDateTime.now());
+            return p;
+        });
+
+        service.crear(crearRequest("Teclado", "50.00"));
+
+        verify(restTemplate).postForObject(
+                INVENTARIO_URL + "/api/inventarios/producto/7", null, Void.class);
     }
 
     // =============================================
@@ -112,8 +128,8 @@ class ProductoServiceTest {
 
         assertThat(resultado.getTotalElements()).isEqualTo(2);
         assertThat(resultado.getContent()).hasSize(2);
-        assertThat(resultado.getContent().get(0).getNombre()).isEqualTo("Mouse");
-        assertThat(resultado.getContent().get(1).getNombre()).isEqualTo("Teclado");
+        assertThat(resultado.getContent().get(0).nombre()).isEqualTo("Mouse");
+        assertThat(resultado.getContent().get(1).nombre()).isEqualTo("Teclado");
     }
 
     @Test
@@ -133,6 +149,7 @@ class ProductoServiceTest {
                 .hasMessageContaining("campoInventado");
         verify(repository, never()).findAll(any(Pageable.class));
     }
+
     // =============================================
     // obtenerPorId
     // =============================================
@@ -143,8 +160,8 @@ class ProductoServiceTest {
 
         ProductoResponse response = service.obtenerPorId(1L);
 
-        assertThat(response.getId()).isEqualTo(1L);
-        assertThat(response.getNombre()).isEqualTo("Monitor");
+        assertThat(response.id()).isEqualTo(1L);
+        assertThat(response.nombre()).isEqualTo("Monitor");
     }
 
     @Test
@@ -153,7 +170,6 @@ class ProductoServiceTest {
 
         assertThatThrownBy(() -> service.obtenerPorId(99L))
                 .isInstanceOf(ProductoNoEncontradoException.class)
-                // CAMBIO: el mensaje ahora incluye el id
                 .hasMessage("Producto con id 99 no existe");
     }
 
@@ -168,8 +184,8 @@ class ProductoServiceTest {
 
         ProductoResponse response = service.actualizar(1L, crearRequest("Auriculares Pro", "120.00"));
 
-        assertThat(response.getNombre()).isEqualTo("Auriculares Pro");
-        assertThat(response.getPrecio()).isEqualByComparingTo("120.00");
+        assertThat(response.nombre()).isEqualTo("Auriculares Pro");
+        assertThat(response.precio()).isEqualByComparingTo("120.00");
         // JPA guarda los cambios al cerrar la transacción, por eso no se llama a save()
         verify(repository, never()).save(any());
     }

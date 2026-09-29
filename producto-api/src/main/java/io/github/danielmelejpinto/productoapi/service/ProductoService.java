@@ -2,12 +2,13 @@ package io.github.danielmelejpinto.productoapi.service;
 
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.client.RestTemplate; // NUEVO: Import de RestTemplate
+import org.springframework.web.client.RestTemplate;
 
 import io.github.danielmelejpinto.productoapi.dto.ProductoRequest;
 import io.github.danielmelejpinto.productoapi.dto.ProductoResponse;
@@ -23,27 +24,28 @@ public class ProductoService {
     private static final List<String> CAMPOS_ORDENABLES = List.of("id", "nombre", "precio", "fechaCreacion");
 
     private final ProductoRepository repository;
-    private final RestTemplate restTemplate; // NUEVO: Variable declarada
+    private final RestTemplate restTemplate;
+    private final String inventarioUrl;
 
-    // NUEVO: Constructor actualizado para inyectar RestTemplate
-    public ProductoService(ProductoRepository repository, RestTemplate restTemplate) {
+    public ProductoService(ProductoRepository repository, RestTemplate restTemplate,
+            @Value("${inventario.api.url}") String inventarioUrl) {
         this.repository = repository;
         this.restTemplate = restTemplate;
+        this.inventarioUrl = inventarioUrl;
     }
 
     @Transactional
     public ProductoResponse crear(ProductoRequest request) {
         Producto producto = new Producto();
-        producto.setNombre(request.getNombre());
-        producto.setPrecio(request.getPrecio());
-        
-        // NUEVO: Guardamos el producto y capturamos la entidad guardada
+        producto.setNombre(request.nombre());
+        producto.setPrecio(request.precio());
+
         Producto productoGuardado = repository.save(producto);
-        
-        // NUEVO: Hacemos la llamada al otro microservicio
-        String url = "http://localhost:8081/api/inventarios/producto/" + productoGuardado.getId();
+
+        // Avisa a inventario-api para que cree el inventario del nuevo producto
+        String url = inventarioUrl + "/api/inventarios/producto/" + productoGuardado.getId();
         restTemplate.postForObject(url, null, Void.class);
-        
+
         return mapearAResponse(productoGuardado);
     }
 
@@ -59,8 +61,8 @@ public class ProductoService {
     @Transactional
     public ProductoResponse actualizar(Long id, ProductoRequest request) {
         Producto producto = buscarEntidadPorId(id);
-        producto.setNombre(request.getNombre());
-        producto.setPrecio(request.getPrecio());
+        producto.setNombre(request.nombre());
+        producto.setPrecio(request.precio());
         // No hace falta repository.save(): la entidad está gestionada por JPA
         return mapearAResponse(producto);
     }
@@ -86,11 +88,10 @@ public class ProductoService {
     }
 
     private ProductoResponse mapearAResponse(Producto producto) {
-        ProductoResponse response = new ProductoResponse();
-        response.setId(producto.getId());
-        response.setNombre(producto.getNombre());
-        response.setPrecio(producto.getPrecio());
-        response.setFechaCreacion(producto.getFechaCreacion());
-        return response;
+        return new ProductoResponse(
+                producto.getId(),
+                producto.getNombre(),
+                producto.getPrecio(),
+                producto.getFechaCreacion());
     }
 }
