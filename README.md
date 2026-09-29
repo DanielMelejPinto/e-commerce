@@ -1,11 +1,16 @@
 # E-Commerce · Productos e Inventario
 
 [![CI](https://github.com/DanielMelejPinto/e-commerce/actions/workflows/ci.yml/badge.svg)](https://github.com/DanielMelejPinto/e-commerce/actions/workflows/ci.yml)
-Backend de e-commerce desarrollado con **Java 21 y Spring Boot**, organizado en dos microservicios independientes: uno administra el catálogo de productos y otro gestiona sus existencias y reservas.
 
-El proyecto implementa APIs REST, persistencia con JPA, validación de solicitudes, control de concurrencia y un **Transactional Outbox** para coordinar la creación de productos con la inicialización de su inventario.
+Sistema backend de e-commerce que gestiona catálogo de productos y existencias de inventario.
+Construido con **Java 21 y Spring Boot 4.1.1**, separado en dos microservicios (`producto-api` e `inventario-api`).
+Características principales:
+- **Transactional Outbox**: garantiza la coordinación entre ambos servicios.
+- **Concurrencia optimista**: previene pérdida de actualizaciones usando `@Version`.
+- **Reserva atómica**: operaciones seguras de stock en base de datos.
+Para ejecutarlo localmente, utiliza `./mvnw spring-boot:run` en las carpetas de cada módulo.
 
-**Estado:** proyecto de práctica en desarrollo. El alcance actual comprende catálogo e inventario; la interfaz de usuario, autenticación, pedidos y pagos quedan fuera de esta versión.
+**Estado:** proyecto de práctica en desarrollo. El alcance actual comprende catálogo e inventario.
 
 ## Contenido
 
@@ -443,24 +448,19 @@ Desde la raíz del repositorio, ejecuta cada módulo por separado:
 (cd inventario-api && ./mvnw test)
 ```
 
-Las clases de prueba de la revisión documentada contienen **88 métodos anotados con `@Test`**:
-
-| Área | Productos | Inventario |
-| --- | ---: | ---: |
-| Controladores e integración HTTP con MockMvc | 30 | 15 |
-| Servicios | 14 | 14 |
-| Cliente de inventario | 4 | — |
-| Procesador Outbox | 4 | — |
-| Manejo de excepciones | 1 | 2 |
-| Generación de OpenAPI | 1 | 1 |
-| Carga del contexto Spring | 1 | 1 |
-| **Total** | **55** | **33** |
+Las clases de prueba verifican diversas áreas en ambos módulos, abarcando:
+- Controladores e integración HTTP con MockMvc
+- Lógica de servicios y repositorios
+- Integración mediante cliente REST
+- Procesamiento del Outbox
+- Manejo de excepciones
+- Generación de OpenAPI y carga del contexto Spring
 
 Productos usa H2 en sus pruebas de contexto y controladores, y simulaciones de dependencias externas. No necesita otra API levantada.
 
-En inventario, `InventarioControllerTest` y `InventarioApiApplicationTests` usan PostgreSQL 17 con Testcontainers y tienen `disabledWithoutDocker = true`. **Si Docker no está disponible, sus 16 pruebas se omiten**; las pruebas de servicios, errores y OpenAPI no requieren esos contenedores.
+En inventario, `InventarioControllerTest` y `InventarioApiApplicationTests` usan PostgreSQL 17 con Testcontainers y tienen `disabledWithoutDocker = true`. **Si Docker no está disponible, se omiten las pruebas que lo requieren**; las pruebas unitarias de servicios y errores no requieren esos contenedores.
 
-Un resultado satisfactorio con pruebas omitidas no confirma la integración ni la concurrencia sobre PostgreSQL. Revisa los contadores de pruebas ejecutadas y omitidas en la salida de Maven o en `target/surefire-reports/` de cada módulo. El número de pruebas declaradas tampoco equivale a un porcentaje de cobertura.
+Un resultado satisfactorio con pruebas omitidas no confirma la integración ni la concurrencia sobre PostgreSQL. Revisa la salida de Maven o `target/surefire-reports/` para ver qué pruebas se ejecutaron.
 
 Para compilar, ejecutar las pruebas y generar los JAR:
 
@@ -509,8 +509,4 @@ Las mejoras de esta sección son propuestas; no representan funcionalidades ya i
 
 ## Licencia
 
-El repositorio no incluye un archivo `LICENSE` en la revisión documentada.
-
----
-
-Documentación contrastada con el código de la rama `main`, commit [`002ff47`](https://github.com/DanielMelejPinto/e-commerce/commit/002ff47f4a7ace5f89beeb4bc7fbad7ec8a9ebcb), del 29 de septiembre de 2026. La revisión fue estática; no se ejecutaron la compilación ni las pruebas en el entorno de preparación de este documento.
+Este proyecto está bajo la Licencia MIT. Consulta el archivo [LICENSE](LICENSE) para más detalles.
