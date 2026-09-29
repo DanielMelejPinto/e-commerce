@@ -1,5 +1,6 @@
 # E-Commerce · Productos e Inventario
 
+[![CI](https://github.com/DanielMelejPinto/e-commerce/actions/workflows/ci.yml/badge.svg)](https://github.com/DanielMelejPinto/e-commerce/actions/workflows/ci.yml)
 Backend de e-commerce desarrollado con **Java 21 y Spring Boot**, organizado en dos microservicios independientes: uno administra el catálogo de productos y otro gestiona sus existencias y reservas.
 
 El proyecto implementa APIs REST, persistencia con JPA, validación de solicitudes, control de concurrencia y un **Transactional Outbox** para coordinar la creación de productos con la inicialización de su inventario.
