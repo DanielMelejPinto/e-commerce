@@ -3,6 +3,8 @@ package io.github.danielmelejpinto.productoapi.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -31,38 +33,43 @@ import io.github.danielmelejpinto.productoapi.exception.OrdenamientoInvalidoExce
 import io.github.danielmelejpinto.productoapi.exception.ProductoNoEncontradoException;
 import io.github.danielmelejpinto.productoapi.model.Producto;
 import io.github.danielmelejpinto.productoapi.repository.ProductoRepository;
+import io.github.danielmelejpinto.productoapi.model.EstadoProducto;
+
+import io.github.danielmelejpinto.productoapi.client.InventarioClient;
 
 // MockitoExtension activa los mocks sin levantar Spring
 @ExtendWith(MockitoExtension.class)
 class ProductoServiceTest {
 
-    private static final String INVENTARIO_URL = "http://inventario-test:8081";
-
     @Mock
     private ProductoRepository repository;
 
     @Mock
-    private RestTemplate restTemplate; // cliente HTTP falso: no llama a inventario-api
+    private InventarioClient inventarioClient;
 
     private ProductoService service;
 
     @BeforeEach
     void setUp() {
-        // Se construye a mano para poder pasarle la URL de inventario
-        service = new ProductoService(repository, restTemplate, INVENTARIO_URL);
+        service = new ProductoService(repository, inventarioClient);
     }
 
     // =============================================
     // Helpers
     // =============================================
 
-    private Producto crearEntidad(Long id, String nombre, String precio) {
+    private Producto crearEntidad(Long id, String nombre, String precio, EstadoProducto estado) {
         Producto producto = new Producto();
         producto.setId(id);
         producto.setNombre(nombre);
         producto.setPrecio(new BigDecimal(precio));
         producto.setFechaCreacion(LocalDateTime.now());
+        producto.setEstado(estado);
         return producto;
+    }
+    
+    private Producto crearEntidad(Long id, String nombre, String precio) {
+        return crearEntidad(id, nombre, precio, EstadoProducto.ACTIVO);
     }
 
     private ProductoRequest crearRequest(String nombre, String precio) {
@@ -90,12 +97,14 @@ class ProductoServiceTest {
         verify(repository).save(captor.capture());
         assertThat(captor.getValue().getNombre()).isEqualTo("Teclado");
         assertThat(captor.getValue().getPrecio()).isEqualByComparingTo("50.00");
+        assertThat(captor.getValue().getEstado()).isEqualTo(EstadoProducto.PENDIENTE);
 
         // Verificamos lo que devuelve el service
         assertThat(response.id()).isEqualTo(1L);
         assertThat(response.nombre()).isEqualTo("Teclado");
         assertThat(response.precio()).isEqualByComparingTo("50.00");
         assertThat(response.fechaCreacion()).isNotNull();
+        assertThat(response.estado()).isEqualTo(EstadoProducto.PENDIENTE);
     }
 
     @Test
@@ -109,8 +118,7 @@ class ProductoServiceTest {
 
         service.crear(crearRequest("Teclado", "50.00"));
 
-        verify(restTemplate).postForObject(
-                INVENTARIO_URL + "/api/inventarios/producto/7", null, Void.class);
+        verify(inventarioClient).inicializarInventario(7L);
     }
 
     // =============================================
@@ -120,9 +128,12 @@ class ProductoServiceTest {
     @Test
     void obtenerTodos_conProductos_deberiaMapearLaPaginaAResponse() {
         Pageable pageable = PageRequest.of(0, 10);
-        when(repository.findAll(pageable)).thenReturn(new PageImpl<>(List.of(
+        Sort sortId = pageable.getSort().and(Sort.by("id"));
+        Pageable expectedPageable = PageRequest.of(0, 10, sortId);
+        
+        when(repository.findByEstado(eq(EstadoProducto.ACTIVO), eq(expectedPageable))).thenReturn(new PageImpl<>(List.of(
                 crearEntidad(1L, "Mouse", "25.00"),
-                crearEntidad(2L, "Teclado", "50.00")), pageable, 2));
+                crearEntidad(2L, "Teclado", "50.00")), expectedPageable, 2));
 
         Page<ProductoResponse> resultado = service.obtenerTodos(pageable);
 
@@ -135,7 +146,10 @@ class ProductoServiceTest {
     @Test
     void obtenerTodos_sinProductos_deberiaDevolverPaginaVacia() {
         Pageable pageable = PageRequest.of(0, 10);
-        when(repository.findAll(pageable)).thenReturn(new PageImpl<>(List.of(), pageable, 0));
+        Sort sortId = pageable.getSort().and(Sort.by("id"));
+        Pageable expectedPageable = PageRequest.of(0, 10, sortId);
+
+        when(repository.findByEstado(eq(EstadoProducto.ACTIVO), eq(expectedPageable))).thenReturn(new PageImpl<>(List.of(), expectedPageable, 0));
 
         assertThat(service.obtenerTodos(pageable).getContent()).isEmpty();
     }
@@ -147,7 +161,7 @@ class ProductoServiceTest {
         assertThatThrownBy(() -> service.obtenerTodos(pageable))
                 .isInstanceOf(OrdenamientoInvalidoException.class)
                 .hasMessageContaining("campoInventado");
-        verify(repository, never()).findAll(any(Pageable.class));
+        verify(repository, never()).findByEstado(any(), any());
     }
 
     // =============================================
@@ -155,13 +169,22 @@ class ProductoServiceTest {
     // =============================================
 
     @Test
-    void obtenerPorId_conIdExistente_deberiaDevolverElProducto() {
+    void obtenerPorId_conIdExistenteYActivo_deberiaDevolverElProducto() {
         when(repository.findById(1L)).thenReturn(Optional.of(crearEntidad(1L, "Monitor", "300.00")));
 
         ProductoResponse response = service.obtenerPorId(1L);
 
         assertThat(response.id()).isEqualTo(1L);
         assertThat(response.nombre()).isEqualTo("Monitor");
+    }
+
+    @Test
+    void obtenerPorId_conIdExistenteYDeBaja_deberiaLanzarNoEncontrado() {
+        when(repository.findById(1L)).thenReturn(Optional.of(crearEntidad(1L, "Monitor", "300.00", EstadoProducto.BAJA)));
+
+        assertThatThrownBy(() -> service.obtenerPorId(1L))
+                .isInstanceOf(ProductoNoEncontradoException.class)
+                .hasMessage("Producto con id 1 no existe");
     }
 
     @Test
@@ -186,7 +209,16 @@ class ProductoServiceTest {
 
         assertThat(response.nombre()).isEqualTo("Auriculares Pro");
         assertThat(response.precio()).isEqualByComparingTo("120.00");
-        // JPA guarda los cambios al cerrar la transacción, por eso no se llama a save()
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void actualizar_conIdBaja_deberiaLanzarNoEncontrado() {
+        Producto existente = crearEntidad(1L, "Auriculares", "80.00", EstadoProducto.BAJA);
+        when(repository.findById(1L)).thenReturn(Optional.of(existente));
+
+        assertThatThrownBy(() -> service.actualizar(1L, crearRequest("Auriculares Pro", "120.00")))
+                .isInstanceOf(ProductoNoEncontradoException.class);
         verify(repository, never()).save(any());
     }
 
@@ -204,14 +236,27 @@ class ProductoServiceTest {
     // =============================================
 
     @Test
-    void eliminar_conIdExistente_deberiaBorrarLaEntidad() {
+    void eliminar_conIdExistente_deberiaCambiarEstadoABajaYNoLlamarInventario() {
         Producto existente = crearEntidad(1L, "Cable USB", "10.00");
         when(repository.findById(1L)).thenReturn(Optional.of(existente));
 
         service.eliminar(1L);
 
-        verify(repository).delete(existente);
-        verify(restTemplate).delete(INVENTARIO_URL + "/api/inventarios/producto/1");
+        assertThat(existente.getEstado()).isEqualTo(EstadoProducto.BAJA);
+        verify(repository, never()).delete(any());
+        
+    }
+
+    @Test
+    void eliminar_conIdBaja_deberiaLanzarNoEncontrado() {
+        Producto existente = crearEntidad(1L, "Cable USB", "10.00", EstadoProducto.BAJA);
+        when(repository.findById(1L)).thenReturn(Optional.of(existente));
+
+        assertThatThrownBy(() -> service.eliminar(1L))
+                .isInstanceOf(ProductoNoEncontradoException.class);
+                
+        verify(repository, never()).delete(any());
+        
     }
 
     @Test
@@ -221,6 +266,6 @@ class ProductoServiceTest {
         assertThatThrownBy(() -> service.eliminar(99L))
                 .isInstanceOf(ProductoNoEncontradoException.class);
         verify(repository, never()).delete(any());
-        verify(restTemplate, never()).delete(any(String.class));
+        
     }
 }

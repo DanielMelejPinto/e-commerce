@@ -2,13 +2,11 @@ package io.github.danielmelejpinto.productoapi.service;
 
 import java.util.List;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.client.RestTemplate;
 
 import io.github.danielmelejpinto.productoapi.dto.ProductoRequest;
 import io.github.danielmelejpinto.productoapi.dto.ProductoResponse;
@@ -17,6 +15,9 @@ import io.github.danielmelejpinto.productoapi.exception.ProductoNoEncontradoExce
 import io.github.danielmelejpinto.productoapi.model.Producto;
 import io.github.danielmelejpinto.productoapi.repository.ProductoRepository;
 
+import io.github.danielmelejpinto.productoapi.model.EstadoProducto;
+import io.github.danielmelejpinto.productoapi.client.InventarioClient;
+
 @Service
 @Transactional(readOnly = true)
 public class ProductoService {
@@ -24,14 +25,11 @@ public class ProductoService {
     private static final List<String> CAMPOS_ORDENABLES = List.of("id", "nombre", "precio", "fechaCreacion");
 
     private final ProductoRepository repository;
-    private final RestTemplate restTemplate;
-    private final String inventarioUrl;
+    private final InventarioClient inventarioClient;
 
-    public ProductoService(ProductoRepository repository, RestTemplate restTemplate,
-            @Value("${inventario.api.url}") String inventarioUrl) {
+    public ProductoService(ProductoRepository repository, InventarioClient inventarioClient) {
         this.repository = repository;
-        this.restTemplate = restTemplate;
-        this.inventarioUrl = inventarioUrl;
+        this.inventarioClient = inventarioClient;
     }
 
     @Transactional
@@ -39,19 +37,24 @@ public class ProductoService {
         Producto producto = new Producto();
         producto.setNombre(request.nombre());
         producto.setPrecio(request.precio());
+        producto.setEstado(EstadoProducto.PENDIENTE);
 
         Producto productoGuardado = repository.save(producto);
 
         // Avisa a inventario-api para que cree el inventario del nuevo producto
-        String url = inventarioUrl + "/api/inventarios/producto/" + productoGuardado.getId();
-        restTemplate.postForObject(url, null, Void.class);
+        inventarioClient.inicializarInventario(productoGuardado.getId());
 
         return mapearAResponse(productoGuardado);
     }
 
     public Page<ProductoResponse> obtenerTodos(Pageable pageable) {
         validarOrdenamiento(pageable.getSort());
-        return repository.findAll(pageable).map(this::mapearAResponse);
+        
+        // Agregar "id" como desempate para paginación estable si no está presente como criterio único principal (siempre lo anexamos)
+        Sort sort = pageable.getSort().and(Sort.by("id"));
+        Pageable pageableConId = org.springframework.data.domain.PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
+        
+        return repository.findByEstado(EstadoProducto.ACTIVO, pageableConId).map(this::mapearAResponse);
     }
 
     public ProductoResponse obtenerPorId(Long id) {
@@ -69,10 +72,8 @@ public class ProductoService {
 
     @Transactional
     public void eliminar(Long id) {
-        repository.delete(buscarEntidadPorId(id));
-        
-        // Si inventario falla se devuelve 503 y el producto no se borra (rollback), igual que en crear()
-        restTemplate.delete(inventarioUrl + "/api/inventarios/producto/" + id);
+        Producto producto = buscarEntidadPorId(id);
+        producto.setEstado(EstadoProducto.BAJA);
     }
 
     // --- Métodos privados de apoyo ---
@@ -86,8 +87,12 @@ public class ProductoService {
     }
 
     private Producto buscarEntidadPorId(Long id) {
-        return repository.findById(id)
+        Producto producto = repository.findById(id)
                 .orElseThrow(() -> new ProductoNoEncontradoException(id));
+        if (producto.getEstado() == EstadoProducto.BAJA) {
+            throw new ProductoNoEncontradoException(id);
+        }
+        return producto;
     }
 
     private ProductoResponse mapearAResponse(Producto producto) {
@@ -95,6 +100,7 @@ public class ProductoService {
                 producto.getId(),
                 producto.getNombre(),
                 producto.getPrecio(),
-                producto.getFechaCreacion());
+                producto.getFechaCreacion(),
+                producto.getEstado());
     }
 }

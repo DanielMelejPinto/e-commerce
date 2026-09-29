@@ -14,7 +14,6 @@ import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import org.springframework.web.client.RestClientException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 @RestControllerAdvice
@@ -58,11 +57,18 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", ex.getMessage()));
     }
 
-    // 6. como crear() es transaccional, el producto hace rollback y no queda guardado a medias.
-    @ExceptionHandler(RestClientException.class)
-    public ResponseEntity<Map<String, String>> manejarInventarioNoDisponible(RestClientException ex) {
+    // 6. Inventario no disponible (timeout, 5xx)
+    @ExceptionHandler(InventarioNoDisponibleException.class)
+    public ResponseEntity<Map<String, String>> manejarInventarioNoDisponible(InventarioNoDisponibleException ex) {
         log.error("Fallo al comunicarse con inventario-api", ex);
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(Map.of("error", "Servicio de inventario no disponible, intenta más tarde"));
+    }
+
+    // 6b. Inventario rechazo (4xx)
+    @ExceptionHandler(InventarioRechazoException.class)
+    public ResponseEntity<Map<String, String>> manejarInventarioRechazo(InventarioRechazoException ex) {
+        log.error("Rechazo de inventario-api", ex);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", ex.getMessage()));
     }
 
     // 7. Concurrencia

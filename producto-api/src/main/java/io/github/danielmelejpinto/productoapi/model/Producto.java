@@ -31,6 +31,10 @@ public class Producto {
     @Column(nullable = false, updatable = false)
     private LocalDateTime fechaCreacion;
 
+    @jakarta.persistence.Enumerated(jakarta.persistence.EnumType.STRING)
+    @Column(nullable = false, columnDefinition = "varchar(20) default 'ACTIVO'")
+    private EstadoProducto estado = EstadoProducto.PENDIENTE;
+
     public Long getId() {
         return id;
     }
@@ -61,6 +65,14 @@ public class Producto {
 
     public void setFechaCreacion(LocalDateTime fechaCreacion) {
         this.fechaCreacion = fechaCreacion;
+    }
+
+    public EstadoProducto getEstado() {
+        return estado;
+    }
+
+    public void setEstado(EstadoProducto estado) {
+        this.estado = estado;
     }
 
     @PrePersist

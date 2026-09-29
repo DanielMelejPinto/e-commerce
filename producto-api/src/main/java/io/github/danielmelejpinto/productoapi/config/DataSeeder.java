@@ -34,6 +34,7 @@ public class DataSeeder {
                 Producto producto = new Producto();
                 producto.setNombre(faker.commerce().productName());
                 producto.setPrecio(BigDecimal.valueOf(faker.number().randomDouble(2, 5, 500)));
+                producto.setEstado(io.github.danielmelejpinto.productoapi.model.EstadoProducto.ACTIVO);
                 repository.save(producto);
             });
 

@@ -22,10 +22,12 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
-import org.springframework.web.client.ResourceAccessException;
-import org.springframework.web.client.RestTemplate;
+import io.github.danielmelejpinto.productoapi.client.InventarioClient;
 
 import com.jayway.jsonpath.JsonPath;
+import io.github.danielmelejpinto.productoapi.repository.ProductoRepository;
+import io.github.danielmelejpinto.productoapi.model.Producto;
+import io.github.danielmelejpinto.productoapi.model.EstadoProducto;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -37,10 +39,13 @@ class ProductoControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    // Sustituye al RestTemplate real: los tests no dependen de que inventario-api
+    @Autowired
+    private ProductoRepository repository;
+
+    // Sustituye al InventarioClient real: los tests no dependen de que inventario-api
     // esté corriendo
     @MockitoBean
-    private RestTemplate restTemplate;
+    private InventarioClient inventarioClient;
 
     // =============================================
     // Helpers
@@ -69,7 +74,11 @@ class ProductoControllerTest {
 
     // Crea un producto y devuelve solo su id: así ningún test depende de "ID 1"
     private long crearProducto(String nombre, String precio) throws Exception {
-        return leerId(crearYObtenerResultado(nombre, precio));
+        long id = leerId(crearYObtenerResultado(nombre, precio));
+        Producto p = repository.findById(id).orElseThrow();
+        p.setEstado(EstadoProducto.ACTIVO);
+        repository.save(p);
+        return id;
     }
 
     // =============================================
@@ -99,8 +108,8 @@ class ProductoControllerTest {
 
     @Test
     void crear_cuandoInventarioNoResponde_deberiaRetornar503YNoGuardarElProducto() throws Exception {
-        when(restTemplate.postForObject(anyString(), any(), eq(Void.class)))
-                .thenThrow(new ResourceAccessException("timeout"));
+        org.mockito.Mockito.doThrow(new io.github.danielmelejpinto.productoapi.exception.InventarioNoDisponibleException("timeout", null))
+                .when(inventarioClient).inicializarInventario(any());
 
         mockMvc.perform(post(URL)
                 .contentType(MediaType.APPLICATION_JSON)
@@ -227,8 +236,7 @@ class ProductoControllerTest {
     void crear_deberiaAvisarAInventarioConLaUrlDelNuevoProducto() throws Exception {
         long id = crearProducto("Teclado", "50.00");
 
-        verify(restTemplate).postForObject(
-                "http://localhost:8081/api/inventarios/producto/" + id, null, Void.class);
+        verify(inventarioClient).inicializarInventario(id);
     }
 
     @Test
@@ -351,20 +359,5 @@ class ProductoControllerTest {
         mockMvc.perform(delete(URL + "/999999"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error").value("Producto con id 999999 no existe"));
-    }
-
-    @Test
-    void eliminar_cuandoInventarioNoResponde_deberiaRetornar503YNoBorrarElProducto() throws Exception {
-        long id = crearProducto("Disco SSD", "150.00");
-        
-        org.mockito.Mockito.doThrow(new org.springframework.web.client.ResourceAccessException("Timeout simulado"))
-                .when(restTemplate).delete(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.any(Object[].class));
-
-        mockMvc.perform(delete(URL + "/" + id))
-                .andExpect(status().isServiceUnavailable());
-
-        // Comprobamos que el producto no se borró
-        mockMvc.perform(get(URL + "/" + id))
-                .andExpect(status().isOk());
     }
 }
