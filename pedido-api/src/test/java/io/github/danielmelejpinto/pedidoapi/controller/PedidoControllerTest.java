@@ -58,4 +58,28 @@ class PedidoControllerTest {
         assertEquals(100L, response.getBody().id());
         assertEquals("CONFIRMADO", response.getBody().estado());
     }
+
+    @Test
+    void cancelarPedido_valido_retorna200() {
+        // Arrange
+        Long usuarioId = 1L;
+        Long pedidoId = 100L;
+        
+        Pedido pedidoMock = new Pedido();
+        pedidoMock.setId(pedidoId);
+        pedidoMock.setUsuarioId(usuarioId);
+        pedidoMock.setEstado(EstadoPedido.CANCELADO);
+        pedidoMock.setTotal(new BigDecimal("200.00"));
+        pedidoMock.setFechaCreacion(LocalDateTime.now());
+
+        when(pedidoService.cancelarPedido(usuarioId, pedidoId)).thenReturn(pedidoMock);
+
+        // Act
+        ResponseEntity<PedidoResponse> response = pedidoController.cancelarPedido(usuarioId, pedidoId);
+
+        // Assert
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(pedidoId, response.getBody().id());
+        assertEquals("CANCELADO", response.getBody().estado());
+    }
 }

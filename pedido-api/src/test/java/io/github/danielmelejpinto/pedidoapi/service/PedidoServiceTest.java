@@ -73,4 +73,58 @@ class PedidoServiceTest {
         verify(inventarioClient, times(1)).reservarStock(productoId, cantidad);
         verify(pedidoRepository, times(1)).save(any(Pedido.class));
     }
+
+    @Test
+    void cancelarPedido_exitoso() {
+        // Arrange
+        Long pedidoId = 1L;
+        Long usuarioId = 1L;
+        Pedido pedido = new Pedido();
+        pedido.setId(pedidoId);
+        pedido.setUsuarioId(usuarioId);
+        pedido.setEstado(EstadoPedido.CONFIRMADO);
+        io.github.danielmelejpinto.pedidoapi.model.PedidoItem item = new io.github.danielmelejpinto.pedidoapi.model.PedidoItem();
+        item.setProductoId(10L);
+        item.setCantidad(2);
+        pedido.addItem(item);
+
+        when(pedidoRepository.findById(pedidoId)).thenReturn(java.util.Optional.of(pedido));
+        doNothing().when(inventarioClient).liberarStock(10L, 2);
+        when(pedidoRepository.save(any(Pedido.class))).thenAnswer(i -> i.getArgument(0));
+
+        // Act
+        Pedido cancelado = pedidoService.cancelarPedido(usuarioId, pedidoId);
+
+        // Assert
+        assertEquals(EstadoPedido.CANCELADO, cancelado.getEstado());
+        verify(inventarioClient, times(1)).liberarStock(10L, 2);
+        verify(pedidoRepository, times(1)).save(pedido);
+    }
+
+    @Test
+    void cancelarPedido_usuarioIncorrecto() {
+        // Arrange
+        Pedido pedido = new Pedido();
+        pedido.setId(1L);
+        pedido.setUsuarioId(2L); // Diferente
+        when(pedidoRepository.findById(1L)).thenReturn(java.util.Optional.of(pedido));
+
+        // Act & Assert
+        assertThrows(io.github.danielmelejpinto.pedidoapi.exception.PedidoNoEncontradoException.class, 
+            () -> pedidoService.cancelarPedido(1L, 1L));
+    }
+
+    @Test
+    void cancelarPedido_estadoInvalido() {
+        // Arrange
+        Pedido pedido = new Pedido();
+        pedido.setId(1L);
+        pedido.setUsuarioId(1L);
+        pedido.setEstado(EstadoPedido.CANCELADO); // Ya está cancelado
+        when(pedidoRepository.findById(1L)).thenReturn(java.util.Optional.of(pedido));
+
+        // Act & Assert
+        assertThrows(io.github.danielmelejpinto.pedidoapi.exception.EstadoPedidoInvalidoException.class, 
+            () -> pedidoService.cancelarPedido(1L, 1L));
+    }
 }

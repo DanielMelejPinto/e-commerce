@@ -83,4 +83,35 @@ public class PedidoService {
     public List<Pedido> obtenerPedidosPorUsuario(Long usuarioId) {
         return pedidoRepository.findByUsuarioId(usuarioId);
     }
+
+    @Transactional
+    public Pedido cancelarPedido(Long usuarioId, Long pedidoId) {
+        Pedido pedido = pedidoRepository.findById(pedidoId)
+                .orElseThrow(() -> new io.github.danielmelejpinto.pedidoapi.exception.PedidoNoEncontradoException(pedidoId));
+
+        if (!pedido.getUsuarioId().equals(usuarioId)) {
+            throw new io.github.danielmelejpinto.pedidoapi.exception.PedidoNoEncontradoException(pedidoId);
+        }
+
+        if (pedido.getEstado() != EstadoPedido.CONFIRMADO) {
+            throw new io.github.danielmelejpinto.pedidoapi.exception.EstadoPedidoInvalidoException(
+                    "No se puede cancelar el pedido porque está en estado " + pedido.getEstado());
+        }
+
+        // Liberar el stock reservado
+        for (PedidoItem item : pedido.getItems()) {
+            try {
+                inventarioClient.liberarStock(item.getProductoId(), item.getCantidad());
+            } catch (Exception e) {
+                // Si la compensación falla aquí, idealmente iría a Dead Letter Queue
+                log.error("Fallo al liberar stock durante cancelación. Pedido: {}, Producto: {}", 
+                          pedido.getId(), item.getProductoId(), e);
+                throw new io.github.danielmelejpinto.pedidoapi.exception.ServicioDependienteException(
+                        "No se pudo completar la cancelación por un error en inventario-api");
+            }
+        }
+
+        pedido.setEstado(EstadoPedido.CANCELADO);
+        return pedidoRepository.save(pedido);
+    }
 }

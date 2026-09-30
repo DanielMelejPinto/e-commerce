@@ -565,7 +565,8 @@ El código permite practicar integración entre servicios, pero todavía requier
 | Reintentos del Outbox | Límite de 5 intentos, pero consulta todos los pendientes y sin espera progresiva | Procesar por lotes, espera progresiva y reproceso manual |
 | Clasificación HTTP | Todos los `4xx` de inventario se consideran permanentes | Distinguir errores de contrato de respuestas recuperables como `429` |
 | Compensación de pedidos | **¡Resuelto!** Usa `slf4j` logger en vez de `System.err` | Cola de reintentos o *dead letter* |
-| Pedidos e idempotencia | Reintentar `POST /api/pedidos` tras un timeout puede reservar dos veces; el estado siempre es `CONFIRMADO` (no hay pago, cancelación ni ciclo de vida) | Clave de idempotencia y estados de pedido |
+| Ciclo de vida del pedido | **¡Resuelto!** Ya hay un endpoint para cancelar pedidos y se compensa el stock en inventario-api | |
+| Idempotencia en pedidos | Reintentar `POST /api/pedidos` tras un timeout puede reservar dos veces | Usar clave de idempotencia (Idempotency-Key) |
 | Errores de pedidos | **¡Resuelto!** Se agregó un `@RestControllerAdvice` global que traduce los errores (404, 409, 503) | Manejo de excepciones unificado |
 | Persistencia | **¡Resuelto!** Todos los servicios utilizan PostgreSQL mediante Docker Compose | Base persistente para todos y un entorno reproducible (Compose completo) |
 | Stock y catálogo | Inventario no comprueba que el producto exista ni su estado | Definir reglas entre ambos dominios |
