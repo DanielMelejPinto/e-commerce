@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useCart } from '../../context/CartContext';
 import { useAuth } from '../../context/AuthContext';
 import { pedidoService } from '../../services/pedidoService';
-import { Trash2 } from 'lucide-react';
+import { Trash2, CheckCircle } from 'lucide-react';
 import styles from './Cart.module.css';
 
 const Cart = () => {
@@ -12,6 +12,8 @@ const Cart = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [isSuccess, setIsSuccess] = useState(false);
+  const [orderId, setOrderId] = useState<number | null>(null);
 
   const handleCheckout = async () => {
     if (!user) {
@@ -32,9 +34,10 @@ const Cart = () => {
         }))
       };
 
-      await pedidoService.crearPedido(payload);
+      const order = await pedidoService.crearPedido(payload);
       clearCart();
-      navigate('/profile'); // Redirigir a perfil para ver el pedido
+      setOrderId(order.id);
+      setIsSuccess(true);
     } catch (err: unknown) {
       console.error(err);
       if (typeof err === 'object' && err !== null && 'response' in err) {
@@ -47,6 +50,23 @@ const Cart = () => {
       setLoading(false);
     }
   };
+
+  if (isSuccess) {
+    return (
+      <div className={styles.container}>
+        <div className={styles.successState}>
+          <CheckCircle />
+          <h2>¡Pedido Confirmado!</h2>
+          <p>Tu pedido #{orderId} ha sido creado exitosamente.</p>
+          <Link to="/profile">
+            <button className={styles.checkoutButton} style={{ width: 'auto', padding: '0.75rem 2rem' }}>
+              Ver mis pedidos
+            </button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   if (items.length === 0) {
     return (
