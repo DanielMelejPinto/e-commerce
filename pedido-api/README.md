@@ -10,7 +10,7 @@ Microservicio de pedidos del [e-commerce](../README.md). Orquesta la compra: val
 - **Reserva de stock:** por cada ítem llama a `PUT .../reservar` de `inventario-api`.
 - **Compensación (saga):** si algo falla, llama a `PUT .../liberar` por cada ítem ya reservado, relanza el error y no guarda el pedido.
 - **Historial:** lista los pedidos del usuario autenticado.
-- **Persistencia:** H2 en memoria (`Pedido` y `PedidoItem` con JPA); se pierde al reiniciar.
+- **Persistencia:** PostgreSQL a través de perfiles de Docker, con Flyway para migraciones.
 
 ## Requisitos
 
@@ -118,13 +118,9 @@ src/main/java/io/github/danielmelejpinto/pedidoapi/
 
 ## Limitaciones conocidas
 
-- **Sin manejador global de errores:** las fallas de `producto-api` o `inventario-api` (producto inexistente, stock insuficiente, servicio caído) no se traducen a respuestas claras; el cliente recibe el error genérico del framework.
-- **Compensación de mejor esfuerzo:** si `liberar` falla, el error solo se escribe en `System.err` y el stock queda reservado sin pedido.
 - **Sin idempotencia:** reintentar `POST /api/pedidos` tras un timeout puede reservar stock dos veces.
 - **Ciclo de vida mínimo:** el estado final es siempre `CONFIRMADO`; no hay pago, cancelación ni confirmación posterior (existe `CANCELADO` en el enum, pero ningún flujo lo usa).
 - **Sin roles** en las autoridades del usuario autenticado.
-- **Secreto JWT sin valor por defecto** y compartido manualmente con `usuario-api`.
-- **H2 en memoria:** los pedidos se pierden al reiniciar.
 - Llamadas HTTP sin timeouts configurados explícitamente.
 
 ## Autor

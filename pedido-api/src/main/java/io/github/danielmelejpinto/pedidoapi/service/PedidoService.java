@@ -8,6 +8,8 @@ import io.github.danielmelejpinto.pedidoapi.model.EstadoPedido;
 import io.github.danielmelejpinto.pedidoapi.model.Pedido;
 import io.github.danielmelejpinto.pedidoapi.model.PedidoItem;
 import io.github.danielmelejpinto.pedidoapi.repository.PedidoRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
@@ -15,6 +17,8 @@ import java.util.List;
 
 @Service
 public class PedidoService {
+
+    private static final Logger log = LoggerFactory.getLogger(PedidoService.class);
 
     private final PedidoRepository pedidoRepository;
     private final ProductoClient productoClient;
@@ -63,8 +67,7 @@ public class PedidoService {
                     // En sistemas avanzados, si la compensación falla, se manda a una "Dead Letter
                     // Queue" (Kafka/RabbitMQ)
                     // para revisión manual. Por ahora, solo lo logueamos.
-                    System.err.println(
-                            "Error crítico al liberar stock huérfano del producto " + itemReservado.getProductoId());
+                    log.error("Error crítico al liberar stock huérfano del producto {}", itemReservado.getProductoId(), exCompensacion);
                 }
             }
             // Relanzamos la excepción para que el usuario reciba su HTTP 400/500 original
