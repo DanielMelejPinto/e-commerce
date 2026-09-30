@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import api from '../../api/axios';
+import { usuarioService } from '../../services/usuarioService';
 import { useAuth } from '../../context/AuthContext';
 import styles from './Login.module.css';
 
@@ -19,22 +19,25 @@ const Login = () => {
 
     try {
       // 1. Obtener token
-      const tokenRes = await api.post('/api/usuarios/login', { email, password });
-      const token = tokenRes.data.token;
+      const tokenRes = await usuarioService.login(email, password);
+      const token = tokenRes.token;
       
       // 2. Obtener perfil
-      const profileRes = await api.get('/api/usuarios/me', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const profile = await usuarioService.obtenerPerfil(token);
       
       // 3. Guardar en contexto
-      login(token, profileRes.data);
+      login(token, profile);
       navigate('/');
-    } catch (err: any) {
-      if (err.response?.status === 401) {
-        setError('Credenciales incorrectas');
+    } catch (err: unknown) {
+      if (typeof err === 'object' && err !== null && 'response' in err) {
+        const error = err as { response?: { status?: number } };
+        if (error.response?.status === 401) {
+          setError('Credenciales incorrectas');
+        } else {
+          setError('Error de conexión con el servidor');
+        }
       } else {
-        setError('Error de conexión con el servidor');
+        setError('Error desconocido');
       }
     } finally {
       setLoading(false);

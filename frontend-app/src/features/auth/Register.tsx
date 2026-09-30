@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import api from '../../api/axios';
+import { usuarioService } from '../../services/usuarioService';
 import styles from './Login.module.css'; // Reusamos los estilos de Login
 
 const Register = () => {
@@ -22,11 +22,16 @@ const Register = () => {
 
     setLoading(true);
     try {
-      await api.post('/api/usuarios/registro', { nombre, email, password });
+      await usuarioService.registro(nombre, email, password);
       // Registro exitoso, redirigimos a login
       navigate('/login?registrado=true');
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Error al registrar el usuario');
+    } catch (err: unknown) {
+      if (typeof err === 'object' && err !== null && 'response' in err) {
+        const error = err as { response?: { data?: { message?: string } } };
+        setError(error.response?.data?.message || 'Error al registrar el usuario');
+      } else {
+        setError('Error al registrar el usuario');
+      }
     } finally {
       setLoading(false);
     }

@@ -1,33 +1,27 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import api from '../api/axios';
-
-interface User {
-  id: number;
-  nombre: string;
-  email: string;
-  rol: string;
-}
+import type { Usuario } from '../types';
+import { usuarioService } from '../services/usuarioService';
 
 interface AuthContextType {
-  user: User | null;
+  user: Usuario | null;
   loading: boolean;
-  login: (token: string, user: User) => void;
+  login: (token: string, user: Usuario) => void;
   logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<Usuario | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
       // Validate token and get profile
-      api.get('/api/usuarios/me')
-        .then((response) => {
-          setUser(response.data);
+      usuarioService.obtenerPerfil()
+        .then((userData) => {
+          setUser(userData);
         })
         .catch(() => {
           localStorage.removeItem('token');
@@ -50,7 +44,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
-  const login = (token: string, userData: User) => {
+  const login = (token: string, userData: Usuario) => {
     localStorage.setItem('token', token);
     setUser(userData);
   };

@@ -1,17 +1,18 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { obtenerMisPedidos, cancelarPedido } from '../../services/pedidoService';
+import { pedidoService } from '../../services/pedidoService';
+import type { Pedido, PedidoItem } from '../../types';
 import styles from './Profile.module.css';
 
 const Profile = () => {
   const { user } = useAuth();
-  const [pedidos, setPedidos] = useState<any[]>([]);
+  const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchPedidos = async () => {
       try {
-        const data = await obtenerMisPedidos();
+        const data = await pedidoService.obtenerMisPedidos();
         setPedidos(data);
       } catch (error) {
         console.error('Error fetching pedidos', error);
@@ -26,7 +27,7 @@ const Profile = () => {
   const handleCancelar = async (pedidoId: number) => {
     if (!window.confirm('¿Estás seguro de que quieres cancelar este pedido?')) return;
     try {
-      const pedidoCancelado = await cancelarPedido(pedidoId);
+      const pedidoCancelado = await pedidoService.cancelarPedido(pedidoId);
       setPedidos((prev) => prev.map((p) => (p.id === pedidoId ? pedidoCancelado : p)));
     } catch (error) {
       alert('Error al cancelar el pedido');
@@ -67,8 +68,8 @@ const Profile = () => {
                 <div className={styles.orderItems}>
                   <h4>Productos:</h4>
                   <ul>
-                    {pedido.items.map((item: any) => (
-                      <li key={item.id}>
+                    {pedido.items.map((item: PedidoItem, idx: number) => (
+                      <li key={idx}>
                         Producto ID: {item.productoId} x {item.cantidad} (${item.precioUnitario.toFixed(2)})
                       </li>
                     ))}

@@ -1,18 +1,19 @@
 import { useEffect, useState } from 'react';
-import api from '../../api/axios';
+import { productoService } from '../../services/productoService';
+import type { Producto } from '../../types';
 import { useCart } from '../../context/CartContext';
 import styles from './Home.module.css';
 
 const Home = () => {
-  const [products, setProducts] = useState<any[]>([]);
+  const [products, setProducts] = useState<Producto[]>([]);
   const [loading, setLoading] = useState(true);
   const { addToCart } = useCart();
 
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const response = await api.get('/api/productos');
-        setProducts(response.data.content || response.data);
+        const data = await productoService.obtenerTodos();
+        setProducts(data);
       } catch (error) {
         console.error('Error fetching products', error);
       } finally {

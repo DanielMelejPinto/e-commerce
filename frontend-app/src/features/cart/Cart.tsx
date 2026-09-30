@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../../context/CartContext';
 import { useAuth } from '../../context/AuthContext';
-import { crearPedido } from '../../services/pedidoService';
+import { pedidoService } from '../../services/pedidoService';
 import { Trash2 } from 'lucide-react';
 import styles from './Cart.module.css';
 
@@ -32,12 +32,17 @@ const Cart = () => {
         }))
       };
 
-      await crearPedido(payload);
+      await pedidoService.crearPedido(payload);
       clearCart();
       navigate('/profile'); // Redirigir a perfil para ver el pedido
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      setError(err.response?.data?.message || 'Error al procesar el pedido. Verifica el stock.');
+      if (typeof err === 'object' && err !== null && 'response' in err) {
+        const error = err as { response?: { data?: { message?: string } } };
+        setError(error.response?.data?.message || 'Error al procesar el pedido. Verifica el stock.');
+      } else {
+        setError('Error al procesar el pedido. Verifica el stock.');
+      }
     } finally {
       setLoading(false);
     }

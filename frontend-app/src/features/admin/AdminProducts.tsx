@@ -1,24 +1,12 @@
 import { useEffect, useState } from 'react';
-import api from '../../api/axios';
+import { productoService } from '../../services/productoService';
+import { inventarioService } from '../../services/inventarioService';
+import type { Producto, Inventario } from '../../types';
 import styles from './AdminProducts.module.css';
 
-interface Product {
-  id: number;
-  nombre: string;
-  descripcion: string;
-  precio: number;
-  imagenUrl: string;
-}
-
-interface Inventory {
-  productoId: number;
-  stockDisponible: number;
-  stockReservado: number;
-}
-
 const AdminProducts = () => {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [inventories, setInventories] = useState<Record<number, Inventory>>({});
+  const [products, setProducts] = useState<Producto[]>([]);
+  const [inventories, setInventories] = useState<Record<number, Inventario>>({});
   const [loading, setLoading] = useState(true);
 
   // Form states for new product
@@ -33,25 +21,27 @@ const AdminProducts = () => {
 
   const fetchProducts = async () => {
     try {
-      const res = await api.get('/api/productos');
-      const prodList = res.data.content || res.data;
+      const prodList = await productoService.obtenerTodos();
       setProducts(prodList);
       
       // Fetch inventory for each product
-      const invData: Record<number, Inventory> = {};
+      const invData: Record<number, Inventario> = {};
       await Promise.all(
-        prodList.map(async (p: Product) => {
+        prodList.map(async (p: Producto) => {
           try {
-            const invRes = await api.get(`/api/inventarios/producto/${p.id}`);
-            invData[p.id] = invRes.data;
-          } catch (e: any) {
-            if (e.response?.status === 404) {
-              // Inventario no inicializado, vamos a inicializarlo
-              try {
-                const initRes = await api.post(`/api/inventarios/producto/${p.id}`);
-                invData[p.id] = initRes.data;
-              } catch (err) {
-                console.error("No se pudo inicializar inventario", err);
+            const inv = await inventarioService.obtenerPorProducto(p.id);
+            invData[p.id] = inv;
+          } catch (e: unknown) {
+            if (typeof e === 'object' && e !== null && 'response' in e) {
+              const err = e as { response?: { status?: number } };
+              if (err.response?.status === 404) {
+                // Inventario no inicializado, vamos a inicializarlo
+                try {
+                  const initInv = await inventarioService.inicializar(p.id);
+                  invData[p.id] = initInv;
+                } catch (err) {
+                  console.error("No se pudo inicializar inventario", err);
+                }
               }
             }
           }
@@ -72,7 +62,7 @@ const AdminProducts = () => {
   const handleCreateProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await api.post('/api/productos', {
+      await productoService.crear({
         nombre,
         descripcion,
         precio: parseFloat(precio),
@@ -92,9 +82,7 @@ const AdminProducts = () => {
     const qty = parseInt(stockAdd[productoId] || '0');
     if (qty <= 0) return;
     try {
-      await api.put(`/api/inventarios/producto/${productoId}/agregar`, {
-        cantidad: qty
-      });
+      await inventarioService.agregarStock(productoId, qty);
       setStockAdd({ ...stockAdd, [productoId]: '' });
       fetchProducts();
     } catch (err) {
