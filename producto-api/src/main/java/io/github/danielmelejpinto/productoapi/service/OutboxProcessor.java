@@ -6,6 +6,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
+import java.time.LocalDateTime;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -42,8 +44,9 @@ public class OutboxProcessor {
     }
 
     @Scheduled(fixedDelay = 5000)
+    @SchedulerLock(name = "procesarEventosPendientesTask", lockAtLeastFor = "${outbox.lock-min:PT4S}", lockAtMostFor = "${outbox.lock-max:PT14M}")
     public void procesarEventosPendientes() {
-        List<OutboxEvent> pendientes = eventRepository.findByEstado(EstadoEvento.PENDIENTE);
+        List<OutboxEvent> pendientes = eventRepository.findPendingEvents(EstadoEvento.PENDIENTE, LocalDateTime.now());
         
         for (OutboxEvent event : pendientes) {
             Producto producto = productoRepository.findById(event.getProductoId()).orElse(null);
@@ -90,7 +93,6 @@ public class OutboxProcessor {
                 // Si llegamos aquí, o la llamada HTTP falló, o la transacción de BD falló.
                 // En ambos casos, el evento no se pudo completar.
                 
-                // Forzamos que retorne a PENDIENTE (por si falló en memoria pero no en BD)
                 event.setEstado(EstadoEvento.PENDIENTE);
                 event.setIntentos(event.getIntentos() + 1);
                 
@@ -98,9 +100,12 @@ public class OutboxProcessor {
                     log.error("Evento {} superó intentos. Marcando ERROR. Error: {}", event.getId(), e.getMessage());
                     event.setEstado(EstadoEvento.ERROR);
                 } else {
-                    log.warn("Fallo temporal en evento {}. Intentos: {}. Error: {}", event.getId(), event.getIntentos(), e.getMessage());
+                    // Exponential backoff: 2^intentos seconds (2s, 4s, 8s, 16s...)
+                    long waitSeconds = (long) Math.pow(2, event.getIntentos());
+                    event.setProximoReintento(LocalDateTime.now().plusSeconds(waitSeconds));
+                    log.warn("Fallo temporal en evento {}. Intentos: {}. Próximo en {}s. Error: {}", event.getId(), event.getIntentos(), waitSeconds, e.getMessage());
                 }
-                eventRepository.save(event); // Guardamos la actualización de intentos
+                eventRepository.save(event);
             }
         }
     }

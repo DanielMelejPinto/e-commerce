@@ -71,7 +71,7 @@ class OutboxProcessorTest {
         producto.setId(10L);
         producto.setEstado(EstadoProducto.BAJA);
 
-        when(eventRepository.findByEstado(EstadoEvento.PENDIENTE)).thenReturn(List.of(event));
+        when(eventRepository.findPendingEvents(any(), any())).thenReturn(List.of(event));
         when(productoRepository.findById(10L)).thenReturn(Optional.of(producto));
 
         processor.procesarEventosPendientes();
@@ -97,7 +97,7 @@ class OutboxProcessorTest {
         producto.setId(10L);
         producto.setEstado(EstadoProducto.PENDIENTE);
 
-        when(eventRepository.findByEstado(EstadoEvento.PENDIENTE)).thenReturn(List.of(event));
+        when(eventRepository.findPendingEvents(any(), any())).thenReturn(List.of(event));
         when(productoRepository.findById(10L)).thenReturn(Optional.of(producto));
 
         processor.procesarEventosPendientes();
@@ -120,7 +120,7 @@ class OutboxProcessorTest {
         producto.setId(10L);
         producto.setEstado(EstadoProducto.PENDIENTE);
 
-        when(eventRepository.findByEstado(EstadoEvento.PENDIENTE)).thenReturn(List.of(event));
+        when(eventRepository.findPendingEvents(any(), any())).thenReturn(List.of(event));
         when(productoRepository.findById(10L)).thenReturn(Optional.of(producto));
         doThrow(new InventarioRechazoException("4xx")).when(inventarioClient).inicializarInventario(10L);
 
@@ -144,7 +144,7 @@ class OutboxProcessorTest {
         producto.setId(10L);
         producto.setEstado(EstadoProducto.PENDIENTE);
 
-        when(eventRepository.findByEstado(EstadoEvento.PENDIENTE)).thenReturn(List.of(event));
+        when(eventRepository.findPendingEvents(any(), any())).thenReturn(List.of(event));
         when(productoRepository.findById(10L)).thenReturn(Optional.of(producto));
         doThrow(new InventarioNoDisponibleException("5xx", null)).when(inventarioClient).inicializarInventario(10L);
 
@@ -169,7 +169,7 @@ class OutboxProcessorTest {
         producto.setId(10L);
         producto.setEstado(EstadoProducto.PENDIENTE);
 
-        when(eventRepository.findByEstado(EstadoEvento.PENDIENTE)).thenReturn(List.of(event));
+        when(eventRepository.findPendingEvents(any(), any())).thenReturn(List.of(event));
         when(productoRepository.findById(10L)).thenReturn(Optional.of(producto));
         doThrow(new InventarioNoDisponibleException("5xx", null)).when(inventarioClient).inicializarInventario(10L);
 

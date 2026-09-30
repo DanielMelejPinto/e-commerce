@@ -33,6 +33,9 @@ public class OutboxEvent {
     @Column(nullable = false)
     private Integer intentos;
 
+    @Column(name = "proximo_reintento")
+    private LocalDateTime proximoReintento;
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public Long getProductoId() { return productoId; }
@@ -45,4 +48,6 @@ public class OutboxEvent {
     public void setFechaCreacion(LocalDateTime fechaCreacion) { this.fechaCreacion = fechaCreacion; }
     public Integer getIntentos() { return intentos; }
     public void setIntentos(Integer intentos) { this.intentos = intentos; }
+    public LocalDateTime getProximoReintento() { return proximoReintento; }
+    public void setProximoReintento(LocalDateTime proximoReintento) { this.proximoReintento = proximoReintento; }
 }
