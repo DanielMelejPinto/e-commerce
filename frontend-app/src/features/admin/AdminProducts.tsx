@@ -91,10 +91,10 @@ const AdminProducts = () => {
     }
   };
 
-  if (loading) return <div>Cargando panel de administración...</div>;
+  if (loading) return <main role="status">Cargando panel de administración...</main>;
 
   return (
-    <div className={styles.container}>
+    <main className={styles.container}>
       <div className={styles.header}>
         <h1>Administración de Productos e Inventario</h1>
         <button className={styles.primaryButton} onClick={() => setShowForm(!showForm)}>
@@ -103,24 +103,24 @@ const AdminProducts = () => {
       </div>
 
       {showForm && (
-        <form onSubmit={handleCreateProduct} className={styles.formCard}>
+        <form onSubmit={handleCreateProduct} className={styles.formCard} aria-label="Formulario de creación de producto">
           <h2>Crear Producto</h2>
           <div className={styles.formGrid}>
             <div className={styles.formGroup}>
-              <label>Nombre</label>
-              <input required value={nombre} onChange={e => setNombre(e.target.value)} />
+              <label htmlFor="nombre">Nombre</label>
+              <input id="nombre" required value={nombre} onChange={e => setNombre(e.target.value)} />
             </div>
             <div className={styles.formGroup}>
-              <label>Precio</label>
-              <input required type="number" step="0.01" value={precio} onChange={e => setPrecio(e.target.value)} />
+              <label htmlFor="precio">Precio</label>
+              <input id="precio" required type="number" step="0.01" value={precio} onChange={e => setPrecio(e.target.value)} />
             </div>
             <div className={styles.formGroup}>
-              <label>URL Imagen</label>
-              <input value={imagenUrl} onChange={e => setImagenUrl(e.target.value)} />
+              <label htmlFor="imagenUrl">URL Imagen</label>
+              <input id="imagenUrl" value={imagenUrl} onChange={e => setImagenUrl(e.target.value)} />
             </div>
             <div className={styles.formGroup}>
-              <label>Descripción</label>
-              <textarea value={descripcion} onChange={e => setDescripcion(e.target.value)} />
+              <label htmlFor="descripcion">Descripción</label>
+              <textarea id="descripcion" value={descripcion} onChange={e => setDescripcion(e.target.value)} />
             </div>
           </div>
           <button type="submit" className={styles.successButton}>Guardar Producto</button>
@@ -128,14 +128,15 @@ const AdminProducts = () => {
       )}
 
       <table className={styles.table}>
+        <caption className="sr-only">Inventario de productos</caption>
         <thead>
           <tr>
-            <th>ID</th>
-            <th>Producto</th>
-            <th>Precio</th>
-            <th>Stock Disponible</th>
-            <th>Stock Reservado</th>
-            <th>Añadir Stock</th>
+            <th scope="col">ID</th>
+            <th scope="col">Producto</th>
+            <th scope="col">Precio</th>
+            <th scope="col">Stock Disponible</th>
+            <th scope="col">Stock Reservado</th>
+            <th scope="col">Añadir Stock</th>
           </tr>
         </thead>
         <tbody>
@@ -163,11 +164,13 @@ const AdminProducts = () => {
                     value={stockAdd[p.id] || ''}
                     onChange={e => setStockAdd({ ...stockAdd, [p.id]: e.target.value })}
                     className={styles.stockInput}
+                    aria-label={`Cantidad a añadir al stock de ${p.nombre}`}
                   />
                   <button 
                     onClick={() => handleAddStock(p.id)}
                     className={styles.secondaryButton}
                     disabled={!stockAdd[p.id]}
+                    aria-label={`Ingresar stock para ${p.nombre}`}
                   >
                     Ingresar
                   </button>
@@ -177,7 +180,7 @@ const AdminProducts = () => {
           ))}
         </tbody>
       </table>
-    </div>
+    </main>
   );
 };
 

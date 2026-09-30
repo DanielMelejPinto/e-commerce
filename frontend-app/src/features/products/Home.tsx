@@ -52,12 +52,13 @@ const Home = () => {
   }, [products, searchTerm]);
 
   return (
-    <div className={styles.container}>
+    <main className={styles.container}>
       <div className={styles.searchContainer}>
         <h1>Catálogo de Productos</h1>
         <input 
           type="text" 
           placeholder="Buscar productos..." 
+          aria-label="Buscar productos en el catálogo"
           className={styles.searchInput}
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
@@ -68,7 +69,7 @@ const Home = () => {
         {loading ? (
           // Skeleton loaders
           Array.from({ length: 8 }).map((_, i) => (
-            <div key={`skeleton-${i}`} className={styles.card}>
+            <div key={`skeleton-${i}`} className={styles.card} aria-hidden="true">
               <div className={`${styles.skeleton} ${styles.skeletonImage}`} />
               <div className={`${styles.skeleton} ${styles.skeletonTitle}`} />
               <div className={`${styles.skeleton} ${styles.skeletonDesc}`} />
@@ -78,11 +79,11 @@ const Home = () => {
           ))
         ) : filteredProducts.length > 0 ? (
           filteredProducts.map((product) => (
-            <div key={product.id} className={styles.card}>
+            <article key={product.id} className={styles.card}>
               {product.imagenUrl ? (
                 <img src={product.imagenUrl} alt={product.nombre} className={styles.image} />
               ) : (
-                <div className={styles.imagePlaceholder}>Sin Imagen</div>
+                <div className={styles.imagePlaceholder} aria-hidden="true">Sin Imagen</div>
               )}
               <h2 className={styles.title}>{product.nombre}</h2>
               <p className={styles.desc}>{product.descripcion}</p>
@@ -90,18 +91,19 @@ const Home = () => {
               <button 
                 className={`${styles.button} ${addedItemIds.has(product.id) ? styles.buttonSuccess : ''}`}
                 onClick={() => handleAddToCart(product)}
+                aria-label={addedItemIds.has(product.id) ? `${product.nombre} agregado al carrito` : `Agregar ${product.nombre} al carrito`}
               >
                 {addedItemIds.has(product.id) ? '¡Agregado!' : 'Agregar al Carrito'}
               </button>
-            </div>
+            </article>
           ))
         ) : (
-          <div className={styles.emptyState}>
+          <div className={styles.emptyState} role="status">
             No se encontraron productos para "{searchTerm}"
           </div>
         )}
       </div>
-    </div>
+    </main>
   );
 };
 

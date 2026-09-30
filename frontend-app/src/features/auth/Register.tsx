@@ -38,11 +38,11 @@ const Register = () => {
   };
 
   return (
-    <div className={styles.container}>
+    <main className={styles.container}>
       <div className={styles.card}>
         <h1 className={styles.title}>Crear Cuenta</h1>
-        {error && <div className={styles.error}>{error}</div>}
-        <form onSubmit={handleSubmit} className={styles.form}>
+        {error && <div className={styles.error} role="alert">{error}</div>}
+        <form onSubmit={handleSubmit} className={styles.form} aria-label="Formulario de registro">
           <div className={styles.formGroup}>
             <label htmlFor="nombre">Nombre completo</label>
             <input
@@ -76,7 +76,7 @@ const Register = () => {
               className={styles.input}
             />
           </div>
-          <button type="submit" disabled={loading} className={styles.button}>
+          <button type="submit" disabled={loading} className={styles.button} aria-busy={loading}>
             {loading ? 'Registrando...' : 'Registrarse'}
           </button>
         </form>
@@ -84,7 +84,7 @@ const Register = () => {
           ¿Ya tienes cuenta? <Link to="/login">Inicia sesión</Link>
         </p>
       </div>
-    </div>
+    </main>
   );
 };
 

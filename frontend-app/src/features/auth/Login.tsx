@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { usuarioService } from '../../services/usuarioService';
 import { useAuth } from '../../context/AuthContext';
 import styles from './Login.module.css';
@@ -11,6 +11,8 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const registrado = searchParams.get('registrado');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -18,14 +20,9 @@ const Login = () => {
     setLoading(true);
 
     try {
-      // 1. Obtener token
       const tokenRes = await usuarioService.login(email, password);
       const token = tokenRes.token;
-      
-      // 2. Obtener perfil
       const profile = await usuarioService.obtenerPerfil(token);
-      
-      // 3. Guardar en contexto
       login(token, profile);
       navigate('/');
     } catch (err: unknown) {
@@ -45,11 +42,12 @@ const Login = () => {
   };
 
   return (
-    <div className={styles.container}>
+    <main className={styles.container}>
       <div className={styles.card}>
         <h1 className={styles.title}>Iniciar Sesión</h1>
-        {error && <div className={styles.error}>{error}</div>}
-        <form onSubmit={handleSubmit} className={styles.form}>
+        {registrado && <div className={styles.success} role="status">Registro exitoso. Por favor inicia sesión.</div>}
+        {error && <div className={styles.error} role="alert">{error}</div>}
+        <form onSubmit={handleSubmit} className={styles.form} aria-label="Formulario de inicio de sesión">
           <div className={styles.formGroup}>
             <label htmlFor="email">Email</label>
             <input
@@ -72,7 +70,7 @@ const Login = () => {
               className={styles.input}
             />
           </div>
-          <button type="submit" disabled={loading} className={styles.button}>
+          <button type="submit" disabled={loading} className={styles.button} aria-busy={loading}>
             {loading ? 'Ingresando...' : 'Ingresar'}
           </button>
         </form>
@@ -80,7 +78,7 @@ const Login = () => {
           ¿No tienes cuenta? <Link to="/register">Regístrate</Link>
         </p>
       </div>
-    </div>
+    </main>
   );
 };
 

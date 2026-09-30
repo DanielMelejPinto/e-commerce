@@ -98,26 +98,26 @@ const Profile = () => {
   };
 
   return (
-    <div className={styles.container}>
+    <main className={styles.container}>
       <h1 className={styles.title}>Mi Perfil</h1>
       
-      <div className={styles.card}>
+      <section className={styles.card}>
         <h2>Datos Personales</h2>
         <p><strong>Nombre:</strong> {user?.nombre}</p>
         <p><strong>Email:</strong> {user?.email}</p>
         <p><strong>Rol:</strong> {user?.rol}</p>
-      </div>
+      </section>
 
-      <div className={styles.ordersSection}>
+      <section className={styles.ordersSection}>
         <h2>Historial de Pedidos</h2>
         {loading ? (
-          <p>Cargando historial...</p>
+          <p role="status">Cargando historial...</p>
         ) : pedidos.length === 0 ? (
           <p>No has realizado ningún pedido aún.</p>
         ) : (
           <div className={styles.ordersList}>
             {pedidos.map((pedido) => (
-              <div key={pedido.id} className={styles.orderCard}>
+              <article key={pedido.id} className={styles.orderCard}>
                 <div className={styles.orderHeader}>
                   <span className={styles.orderId}>Pedido #{pedido.id}</span>
                   <span className={`${styles.status} ${styles[pedido.estado.toLowerCase()]}`}>
@@ -145,12 +145,12 @@ const Profile = () => {
                     disabled={canceling === pedido.id}
                   />
                 )}
-              </div>
+              </article>
             ))}
           </div>
         )}
-      </div>
-    </div>
+      </section>
+    </main>
   );
 };
 

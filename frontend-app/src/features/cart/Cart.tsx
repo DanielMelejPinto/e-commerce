@@ -53,9 +53,9 @@ const Cart = () => {
 
   if (isSuccess) {
     return (
-      <div className={styles.container}>
-        <div className={styles.successState}>
-          <CheckCircle />
+      <main className={styles.container}>
+        <div className={styles.successState} role="status">
+          <CheckCircle aria-hidden="true" />
           <h2>¡Pedido Confirmado!</h2>
           <p>Tu pedido #{orderId} ha sido creado exitosamente.</p>
           <Link to="/profile">
@@ -64,33 +64,33 @@ const Cart = () => {
             </button>
           </Link>
         </div>
-      </div>
+      </main>
     );
   }
 
   if (items.length === 0) {
     return (
-      <div className={styles.container}>
+      <main className={styles.container}>
         <h1>Carrito de Compras</h1>
-        <div className={styles.empty}>Tu carrito está vacío.</div>
-      </div>
+        <div className={styles.empty} role="status">Tu carrito está vacío.</div>
+      </main>
     );
   }
 
   return (
-    <div className={styles.container}>
+    <main className={styles.container}>
       <h1>Carrito de Compras</h1>
       
-      {error && <div className={styles.error}>{error}</div>}
+      {error && <div className={styles.error} role="alert">{error}</div>}
 
       <div className={styles.cartContent}>
         <div className={styles.itemsList}>
           {items.map(item => (
-            <div key={item.productoId} className={styles.cartItem}>
+            <article key={item.productoId} className={styles.cartItem}>
               {item.imagenUrl ? (
                 <img src={item.imagenUrl} alt={item.nombre} className={styles.itemImage} />
               ) : (
-                <div className={styles.imagePlaceholder} />
+                <div className={styles.imagePlaceholder} aria-hidden="true" />
               )}
               
               <div className={styles.itemDetails}>
@@ -105,19 +105,22 @@ const Cart = () => {
                   value={item.cantidad}
                   onChange={(e) => updateQuantity(item.productoId, parseInt(e.target.value) || 1)}
                   className={styles.quantityInput}
+                  aria-label={`Cantidad de ${item.nombre}`}
                 />
                 <button
                   onClick={() => removeFromCart(item.productoId)}
                   className={styles.deleteButton}
+                  aria-label={`Eliminar ${item.nombre} del carrito`}
+                  title={`Eliminar ${item.nombre}`}
                 >
-                  <Trash2 size={20} />
+                  <Trash2 size={20} aria-hidden="true" />
                 </button>
               </div>
-            </div>
+            </article>
           ))}
         </div>
 
-        <div className={styles.summary}>
+        <aside className={styles.summary}>
           <h2>Resumen</h2>
           <div className={styles.summaryRow}>
             <span>Total:</span>
@@ -127,12 +130,13 @@ const Cart = () => {
             onClick={handleCheckout}
             disabled={loading}
             className={styles.checkoutButton}
+            aria-busy={loading}
           >
             {loading ? 'Procesando...' : 'Realizar Pedido'}
           </button>
-        </div>
+        </aside>
       </div>
-    </div>
+    </main>
   );
 };
 

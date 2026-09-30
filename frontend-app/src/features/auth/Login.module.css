@@ -82,3 +82,10 @@
   background-color: #a5d8ff;
   cursor: not-allowed;
 }
+.success {
+  background-color: #d3f9d8;
+  color: #2b8a3e;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
