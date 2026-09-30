@@ -1,9 +1,9 @@
 package io.github.danielmelejpinto.pedidoapi.client;
 
 import io.github.danielmelejpinto.pedidoapi.client.dto.ProductoDTO;
+import io.github.danielmelejpinto.pedidoapi.config.ApiProperties;
 import io.github.danielmelejpinto.pedidoapi.exception.ProductoNoEncontradoException;
 import io.github.danielmelejpinto.pedidoapi.exception.ServicioDependienteException;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
@@ -11,8 +11,8 @@ import org.springframework.web.client.RestClient;
 public class ProductoClient {
     private final RestClient restClient;
 
-    public ProductoClient(@Value("${api.producto.url}") String url) {
-        this.restClient = RestClient.builder().baseUrl(url).build();
+    public ProductoClient(ApiProperties apiProperties) {
+        this.restClient = RestClient.builder().baseUrl(apiProperties.getProducto().getUrl()).build();
     }
 
     public ProductoDTO obtenerProducto(Long id) {
