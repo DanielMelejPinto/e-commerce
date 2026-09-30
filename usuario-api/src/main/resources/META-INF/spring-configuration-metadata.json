@@ -1,0 +1,19 @@
+{
+  "properties": [
+    {
+      "name": "seguridad.jwt.secret",
+      "type": "java.lang.String",
+      "description": "Secreto utilizado para firmar y verificar tokens JWT."
+    },
+    {
+      "name": "seguridad.jwt.expiration-ms",
+      "type": "java.lang.Integer",
+      "description": "Tiempo de expiración del token JWT en milisegundos."
+    },
+    {
+      "name": "seguridad.bcrypt-cost",
+      "type": "java.lang.Integer",
+      "description": "Costo algorítmico (rounds) para el hash BCrypt."
+    }
+  ]
+}
