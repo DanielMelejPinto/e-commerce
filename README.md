@@ -563,6 +563,8 @@ El código permite practicar integración entre servicios, pero todavía requier
 | Secreto JWT | Secreto compartido por variable de entorno; `pedido-api` no arranca sin él y la clave por defecto de `usuario-api` es pública | Gestionar el secreto fuera del repositorio; considerar claves asimétricas |
 | Finalización del Outbox | Producto y evento se guardan por separado; el evento no tiene bloqueo ni versión | Hacer atómica la actualización final y coordinar varias instancias |
 | Reintentos del Outbox | Límite de 5 intentos, pero consulta todos los pendientes y sin espera progresiva | Procesar por lotes, espera progresiva y reproceso manual |
+| Clasificación HTTP en Pedidos | **¡Resuelto!** Ahora los clientes HTTP propagan errores 4xx (como 404 y 400) en lugar de enmascararlos como 503 Service Unavailable | | 
+
 | Clasificación HTTP | Todos los `4xx` de inventario se consideran permanentes | Distinguir errores de contrato de respuestas recuperables como `429` |
 | Compensación de pedidos | **¡Resuelto!** Usa `slf4j` logger en vez de `System.err` | Cola de reintentos o *dead letter* |
 | Ciclo de vida del pedido | **¡Resuelto!** Ya hay un endpoint para cancelar pedidos y se compensa el stock en inventario-api | |
