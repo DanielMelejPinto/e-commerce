@@ -12,20 +12,8 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      '/api/productos': {
-        target: 'http://localhost:8080',
-        changeOrigin: true,
-      },
-      '/api/inventarios': {
-        target: 'http://localhost:8081',
-        changeOrigin: true,
-      },
-      '/api/usuarios': {
-        target: 'http://localhost:8082',
-        changeOrigin: true,
-      },
-      '/api/pedidos': {
-        target: 'http://localhost:8083',
+      '/api': {
+        target: 'http://localhost:8000',
         changeOrigin: true,
       }
     }
