@@ -1,0 +1,164 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.empty {
+  padding: 3rem;
+  background: white;
+  border-radius: 8px;
+  text-align: center;
+  color: #6c757d;
+  font-size: 1.1rem;
+}
+
+.error {
+  background-color: #ffe3e3;
+  color: #c92a2a;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.cartContent {
+  display: flex;
+  gap: 2rem;
+  align-items: flex-start;
+}
+
+@media (max-width: 768px) {
+  .cartContent {
+    flex-direction: column;
+  }
+}
+
+.itemsList {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
+}
+
+.cartItem {
+  display: flex;
+  background: white;
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.itemImage, .imagePlaceholder {
+  width: 80px;
+  height: 80px;
+  border-radius: 4px;
+  object-fit: cover;
+}
+
+.imagePlaceholder {
+  background-color: #f1f3f5;
+}
+
+.itemDetails {
+  flex: 1;
+}
+
+.itemDetails h3 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.1rem;
+}
+
+.itemPrice {
+  margin: 0;
+  font-weight: bold;
+  color: #2b8a3e;
+}
+
+.itemActions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.quantityInput {
+  width: 60px;
+  padding: 0.5rem;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  text-align: center;
+}
+
+.deleteButton {
+  background: none;
+  border: none;
+  color: #fa5252;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.deleteButton:hover {
+  background-color: #ffe3e3;
+}
+
+.summary {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+  width: 300px;
+  position: sticky;
+  top: 100px;
+}
+
+.summary h2 {
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+}
+
+.summaryRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  font-size: 1.1rem;
+  font-weight: bold;
+}
+
+.totalPrice {
+  color: #2b8a3e;
+  font-size: 1.25rem;
+}
+
+.checkoutButton {
+  width: 100%;
+  background-color: #228be6;
+  color: white;
+  border: none;
+  padding: 1rem;
+  border-radius: 4px;
+  font-weight: bold;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.checkoutButton:hover:not(:disabled) {
+  background-color: #1c7ed6;
+}
+
+.checkoutButton:disabled {
+  background-color: #a5d8ff;
+  cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+  .summary {
+    width: 100%;
+    position: static;
+  }
+}

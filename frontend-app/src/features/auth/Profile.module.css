@@ -1,0 +1,99 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.title {
+  margin: 0;
+  color: #343a40;
+}
+
+.card {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  border: 1px solid #e9ecef;
+}
+
+.card h2 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  font-size: 1.25rem;
+}
+
+.card p {
+  margin: 0.5rem 0;
+  color: #495057;
+}
+
+.ordersSection {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.ordersList {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.orderCard {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.orderHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #f1f3f5;
+  padding-bottom: 0.75rem;
+}
+
+.orderId {
+  font-weight: bold;
+  font-size: 1.1rem;
+}
+
+.status {
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.pendiente { background-color: #fff3cd; color: #856404; }
+.confirmado { background-color: #d4edda; color: #155724; }
+.cancelado { background-color: #f8d7da; color: #721c24; }
+
+.orderDetails p {
+  margin: 0.25rem 0;
+}
+
+.orderItems {
+  background-color: #f8f9fa;
+  padding: 1rem;
+  border-radius: 4px;
+}
+
+.orderItems h4 {
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+}
+
+.orderItems ul {
+  margin: 0;
+  padding-left: 1.5rem;
+}
+
+.orderItems li {
+  margin: 0.25rem 0;
+}
