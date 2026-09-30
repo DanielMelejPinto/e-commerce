@@ -82,3 +82,89 @@
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+
+/* Search Bar */
+.searchContainer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.searchInput {
+  padding: 0.75rem 1rem;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  width: 100%;
+  max-width: 400px;
+  font-size: 1rem;
+  transition: border-color 0.2s;
+}
+
+.searchInput:focus {
+  outline: none;
+  border-color: #228be6;
+}
+
+.emptyState {
+  text-align: center;
+  padding: 3rem;
+  color: #6c757d;
+  font-size: 1.1rem;
+  grid-column: 1 / -1;
+}
+
+/* Skeleton */
+.skeleton {
+  animation: pulse 1.5s infinite;
+  background-color: #e9ecef;
+  border-radius: 4px;
+}
+
+.skeletonImage {
+  width: 100%;
+  height: 200px;
+}
+
+.skeletonTitle {
+  width: 70%;
+  height: 24px;
+  margin-top: 1rem;
+}
+
+.skeletonDesc {
+  width: 100%;
+  height: 36px;
+  margin-top: 0.5rem;
+}
+
+.skeletonPrice {
+  width: 30%;
+  height: 24px;
+  margin-top: 0.5rem;
+}
+
+.skeletonButton {
+  width: 100%;
+  height: 42px;
+  margin-top: auto;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.buttonSuccess {
+  background-color: #2b8a3e;
+}
+.buttonSuccess:hover {
+  background-color: #237032;
+}
