@@ -5,6 +5,18 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-ecommerce_user}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ecommerce_pass}
       POSTGRES_DB: postgres
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    depends_on:
+      - producto-api
+      - inventario-api
+      - usuario-api
+      - pedido-api
+
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
@@ -74,6 +86,18 @@ services:
         condition: service_healthy
       pedido-api:
         condition: service_healthy
+
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    depends_on:
+      - producto-api
+      - inventario-api
+      - usuario-api
+      - pedido-api
 
 volumes:
   pgdata:

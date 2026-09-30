@@ -24,6 +24,7 @@ public class SecurityConfig {
         http
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/actuator/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/inventarios/producto/**").permitAll()
                 .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html", "/actuator/**", "/h2-console/**").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/inventarios/producto/**").hasAnyRole("ADMIN", "SYSTEM")

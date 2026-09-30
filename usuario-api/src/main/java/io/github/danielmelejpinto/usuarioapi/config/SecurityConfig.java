@@ -31,6 +31,7 @@ public class SecurityConfig {
             // JWT no usa sesión, le indicamos a Spring que sea STATELESS
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/actuator/**").permitAll()
                 // Endpoints públicos: registro y login
                 .requestMatchers("/api/usuarios/registro", "/api/usuarios/login").permitAll()
                 // Swagger para la documentación
