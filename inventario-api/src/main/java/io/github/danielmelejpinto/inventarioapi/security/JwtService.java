@@ -1,4 +1,4 @@
-package io.github.danielmelejpinto.usuarioapi.security;
+package io.github.danielmelejpinto.inventarioapi.security;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
@@ -18,27 +18,22 @@ public class JwtService {
 
     public JwtService(@Value("${seguridad.jwt.secret}") String secret,
                       @Value("${seguridad.jwt.expiration-ms:86400000}") long jwtExpirationMs) {
-        // Genera la clave criptográfica usando la propiedad configurada
         this.secretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         this.jwtExpirationMs = jwtExpirationMs;
     }
 
-    public String generarToken(String email, Long usuarioId, String rol) {
+    public String generarTokenSistema() {
         Date ahora = new Date();
         Date expiracion = new Date(ahora.getTime() + jwtExpirationMs);
 
         return Jwts.builder()
-                .subject(email) // El "subject" del token será el email del usuario
-                .claim("userId", usuarioId)
-                .claim("rol", rol)
+                .subject("sistema@interno")
+                .claim("userId", 0L)
+                .claim("rol", "SYSTEM")
                 .issuedAt(ahora)
                 .expiration(expiracion)
                 .signWith(secretKey)
                 .compact();
-    }
-
-    public String extraerEmail(String token) {
-        return obtenerClaims(token).getSubject();
     }
 
     public Long extraerUserId(String token) {
@@ -54,7 +49,6 @@ public class JwtService {
             obtenerClaims(token);
             return true;
         } catch (Exception e) {
-            // El token expiró, la firma es inválida, o está mal formado
             return false;
         }
     }
@@ -63,7 +57,7 @@ public class JwtService {
         return Jwts.parser()
                 .verifyWith(secretKey)
                 .build()
-                .parseSignedClaims(token) // Si el token es inválido, esto lanza una excepción
+                .parseSignedClaims(token)
                 .getPayload();
     }
 }

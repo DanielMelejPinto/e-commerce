@@ -81,7 +81,7 @@ public class UsuarioService {
         Usuario usuario = repository.findByEmail(emailLimpio)
                 .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado"));
 
-        String token = jwtService.generarToken(emailLimpio, usuario.getId());
+        String token = jwtService.generarToken(emailLimpio, usuario.getId(), usuario.getRol().name());
         return new TokenResponse(token);
     }
 

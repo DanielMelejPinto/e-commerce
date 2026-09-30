@@ -6,19 +6,25 @@ import org.springframework.web.client.RestClient;
 import io.github.danielmelejpinto.productoapi.exception.InventarioNoDisponibleException;
 import io.github.danielmelejpinto.productoapi.exception.InventarioRechazoException;
 
+import io.github.danielmelejpinto.productoapi.security.JwtService;
+
 @Component
 public class InventarioClient {
 
     private final RestClient restClient;
+    private final JwtService jwtService;
 
-    public InventarioClient(RestClient restClient) {
+    public InventarioClient(RestClient restClient, JwtService jwtService) {
         this.restClient = restClient;
+        this.jwtService = jwtService;
     }
 
     public void inicializarInventario(Long productoId) {
         try {
+            String token = jwtService.generarTokenSistema();
             restClient.post()
                     .uri("/api/inventarios/producto/{id}", productoId)
+                    .header("Authorization", "Bearer " + token)
                     .retrieve()
                     .onStatus(status -> status.is4xxClientError(), (request, response) -> {
                         throw new InventarioRechazoException("El inventario rechazó la petición (4xx) para el producto " + productoId);

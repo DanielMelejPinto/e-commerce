@@ -16,8 +16,11 @@ public class InventarioClient {
     private final RestClient restClient;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public InventarioClient(ApiProperties apiProperties) {
-        this.restClient = RestClient.builder().baseUrl(apiProperties.getInventario().getUrl()).build();
+    public InventarioClient(ApiProperties apiProperties, TokenForwardingInterceptor interceptor) {
+        this.restClient = RestClient.builder()
+                .baseUrl(apiProperties.getInventario().getUrl())
+                .requestInterceptor(interceptor)
+                .build();
     }
 
     public void reservarStock(Long productoId, Integer cantidad) {

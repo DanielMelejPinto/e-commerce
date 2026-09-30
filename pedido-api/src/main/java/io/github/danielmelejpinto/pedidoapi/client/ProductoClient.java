@@ -11,8 +11,11 @@ import org.springframework.web.client.RestClient;
 public class ProductoClient {
     private final RestClient restClient;
 
-    public ProductoClient(ApiProperties apiProperties) {
-        this.restClient = RestClient.builder().baseUrl(apiProperties.getProducto().getUrl()).build();
+    public ProductoClient(ApiProperties apiProperties, TokenForwardingInterceptor interceptor) {
+        this.restClient = RestClient.builder()
+                .baseUrl(apiProperties.getProducto().getUrl())
+                .requestInterceptor(interceptor)
+                .build();
     }
 
     public ProductoDTO obtenerProducto(Long id) {

@@ -11,6 +11,7 @@ import java.io.IOException;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.test.web.client.MockRestServiceServer;
@@ -18,17 +19,22 @@ import org.springframework.web.client.RestClient;
 
 import io.github.danielmelejpinto.productoapi.exception.InventarioNoDisponibleException;
 import io.github.danielmelejpinto.productoapi.exception.InventarioRechazoException;
+import io.github.danielmelejpinto.productoapi.security.JwtService;
 
 class InventarioClientTest {
 
     private MockRestServiceServer mockServer;
     private InventarioClient client;
+    private JwtService jwtService;
 
     @BeforeEach
     void setUp() {
+        jwtService = Mockito.mock(JwtService.class);
+        Mockito.when(jwtService.generarTokenSistema()).thenReturn("token-mock");
+        
         RestClient.Builder builder = RestClient.builder().baseUrl("http://inventario.test");
         mockServer = MockRestServiceServer.bindTo(builder).build();
-        client = new InventarioClient(builder.build());
+        client = new InventarioClient(builder.build(), jwtService);
     }
 
     @Test
