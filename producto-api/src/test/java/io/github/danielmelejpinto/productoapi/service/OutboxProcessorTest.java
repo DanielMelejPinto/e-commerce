@@ -19,9 +19,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.transaction.support.SimpleTransactionStatus;
 
-import io.github.danielmelejpinto.productoapi.client.InventarioClient;
-import io.github.danielmelejpinto.productoapi.exception.InventarioNoDisponibleException;
-import io.github.danielmelejpinto.productoapi.exception.InventarioRechazoException;
 import io.github.danielmelejpinto.productoapi.model.EstadoEvento;
 import io.github.danielmelejpinto.productoapi.model.EstadoProducto;
 import io.github.danielmelejpinto.productoapi.model.OutboxEvent;
@@ -29,6 +26,7 @@ import io.github.danielmelejpinto.productoapi.model.Producto;
 import io.github.danielmelejpinto.productoapi.model.TipoEvento;
 import io.github.danielmelejpinto.productoapi.repository.OutboxEventRepository;
 import io.github.danielmelejpinto.productoapi.repository.ProductoRepository;
+import org.springframework.kafka.core.KafkaTemplate;
 
 @ExtendWith(MockitoExtension.class)
 class OutboxProcessorTest {
@@ -40,7 +38,7 @@ class OutboxProcessorTest {
     private ProductoRepository productoRepository;
 
     @Mock
-    private InventarioClient inventarioClient;
+    private KafkaTemplate<String, Object> kafkaTemplate;
 
     @Mock
     private TransactionTemplate transactionTemplate;
@@ -55,7 +53,7 @@ class OutboxProcessorTest {
             return null;
         }).when(transactionTemplate).executeWithoutResult(any());
 
-        processor = new OutboxProcessor(eventRepository, productoRepository, inventarioClient, transactionTemplate);
+        processor = new OutboxProcessor(eventRepository, productoRepository, kafkaTemplate, transactionTemplate);
         org.springframework.test.util.ReflectionTestUtils.setField(processor, "maxIntentos", 5);
     }
 
@@ -76,7 +74,7 @@ class OutboxProcessorTest {
 
         processor.procesarEventosPendientes();
 
-        verify(inventarioClient, never()).inicializarInventario(any());
+        verify(kafkaTemplate, never()).send(any(), any(), any());
         verify(productoRepository, never()).save(producto);
         
         ArgumentCaptor<OutboxEvent> captor = ArgumentCaptor.forClass(OutboxEvent.class);
@@ -102,32 +100,9 @@ class OutboxProcessorTest {
 
         processor.procesarEventosPendientes();
 
-        verify(inventarioClient).inicializarInventario(10L);
+        verify(kafkaTemplate).send("producto-events", "10", producto);
         assertThat(producto.getEstado()).isEqualTo(EstadoProducto.ACTIVO);
         assertThat(event.getEstado()).isEqualTo(EstadoEvento.ENVIADO);
-        verify(productoRepository).save(producto);
-        verify(eventRepository).save(event);
-    }
-
-    @Test
-    void procesarEventosPendientes_fallaPermanente_deberiaDarBajaYMarcarError() {
-        OutboxEvent event = new OutboxEvent();
-        event.setId(1L);
-        event.setProductoId(10L);
-        event.setEstado(EstadoEvento.PENDIENTE);
-        
-        Producto producto = new Producto();
-        producto.setId(10L);
-        producto.setEstado(EstadoProducto.PENDIENTE);
-
-        when(eventRepository.findPendingEvents(any(), any())).thenReturn(List.of(event));
-        when(productoRepository.findById(10L)).thenReturn(Optional.of(producto));
-        doThrow(new InventarioRechazoException("4xx")).when(inventarioClient).inicializarInventario(10L);
-
-        processor.procesarEventosPendientes();
-
-        assertThat(producto.getEstado()).isEqualTo(EstadoProducto.BAJA);
-        assertThat(event.getEstado()).isEqualTo(EstadoEvento.ERROR);
         verify(productoRepository).save(producto);
         verify(eventRepository).save(event);
     }
@@ -146,7 +121,7 @@ class OutboxProcessorTest {
 
         when(eventRepository.findPendingEvents(any(), any())).thenReturn(List.of(event));
         when(productoRepository.findById(10L)).thenReturn(Optional.of(producto));
-        doThrow(new InventarioNoDisponibleException("5xx", null)).when(inventarioClient).inicializarInventario(10L);
+        doThrow(new RuntimeException("Kafka down")).when(kafkaTemplate).send(any(), any(), any());
 
         processor.procesarEventosPendientes();
 
@@ -171,7 +146,7 @@ class OutboxProcessorTest {
 
         when(eventRepository.findPendingEvents(any(), any())).thenReturn(List.of(event));
         when(productoRepository.findById(10L)).thenReturn(Optional.of(producto));
-        doThrow(new InventarioNoDisponibleException("5xx", null)).when(inventarioClient).inicializarInventario(10L);
+        doThrow(new RuntimeException("Kafka down")).when(kafkaTemplate).send(any(), any(), any());
 
         processor.procesarEventosPendientes();
 

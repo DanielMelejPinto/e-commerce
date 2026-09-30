@@ -142,7 +142,7 @@ class ProductoServiceTest {
                 crearEntidad(1L, "Mouse", "25.00"),
                 crearEntidad(2L, "Teclado", "50.00")), expectedPageable, 2));
 
-        Page<ProductoResponse> resultado = service.obtenerTodos(pageable);
+        Page<ProductoResponse> resultado = service.obtenerTodos(null, pageable);
 
         assertThat(resultado.getTotalElements()).isEqualTo(2);
         assertThat(resultado.getContent()).hasSize(2);
@@ -158,14 +158,14 @@ class ProductoServiceTest {
 
         when(repository.findByEstado(eq(EstadoProducto.ACTIVO), eq(expectedPageable))).thenReturn(new PageImpl<>(List.of(), expectedPageable, 0));
 
-        assertThat(service.obtenerTodos(pageable).getContent()).isEmpty();
+        assertThat(service.obtenerTodos(null, pageable).getContent()).isEmpty();
     }
 
     @Test
     void obtenerTodos_conCampoDeOrdenNoPermitido_deberiaLanzarExcepcionYNoConsultar() {
         Pageable pageable = PageRequest.of(0, 10, Sort.by(CAMPO_INVENTADO));
 
-        assertThatThrownBy(() -> service.obtenerTodos(pageable))
+        assertThatThrownBy(() -> service.obtenerTodos(null, pageable))
                 .isInstanceOf(OrdenamientoInvalidoException.class)
                 .hasMessageContaining("campoInventado");
         verify(repository, never()).findByEstado(any(), any());

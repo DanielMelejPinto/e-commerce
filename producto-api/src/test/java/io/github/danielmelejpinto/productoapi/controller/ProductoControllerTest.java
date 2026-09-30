@@ -20,8 +20,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 import com.jayway.jsonpath.JsonPath;
-import io.github.danielmelejpinto.productoapi.client.InventarioClient;
-import io.github.danielmelejpinto.productoapi.service.OutboxProcessor;
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 @SpringBootTest
 @AutoConfigureMockMvc(addFilters = false)
@@ -33,13 +33,11 @@ class ProductoControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    @Autowired
-    // Sustituye al InventarioClient real: los tests no dependen de que inventario-api
-    // esté corriendo
     @MockitoBean
-    private InventarioClient inventarioClient;
+    private KafkaTemplate<String, Object> kafkaTemplate;
+
     @Autowired
-    private OutboxProcessor outboxProcessor;
+    private io.github.danielmelejpinto.productoapi.service.OutboxProcessor outboxProcessor;
 
 
     @Test
@@ -226,13 +224,6 @@ class ProductoControllerTest {
         mockMvc.perform(get(URL).param("sort", "id,desc"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[?(@.nombre == 'Mouse')]").exists());
-    }
-
-    @Test
-    void crear_deberiaAvisarAInventarioConLaUrlDelNuevoProducto() throws Exception {
-        long id = crearProducto("Teclado", "50.00");
-
-        verify(inventarioClient).inicializarInventario(id);
     }
 
     @Test
