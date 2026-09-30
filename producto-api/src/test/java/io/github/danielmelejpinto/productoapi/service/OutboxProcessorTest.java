@@ -16,6 +16,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.transaction.support.SimpleTransactionStatus;
 
 import io.github.danielmelejpinto.productoapi.client.InventarioClient;
 import io.github.danielmelejpinto.productoapi.exception.InventarioNoDisponibleException;
@@ -40,11 +42,20 @@ class OutboxProcessorTest {
     @Mock
     private InventarioClient inventarioClient;
 
+    @Mock
+    private TransactionTemplate transactionTemplate;
+
     private OutboxProcessor processor;
 
     @BeforeEach
     void setUp() {
-        processor = new OutboxProcessor(eventRepository, productoRepository, inventarioClient);
+        org.mockito.Mockito.lenient().doAnswer(invocation -> {
+            java.util.function.Consumer<SimpleTransactionStatus> action = invocation.getArgument(0);
+            action.accept(new SimpleTransactionStatus());
+            return null;
+        }).when(transactionTemplate).executeWithoutResult(any());
+
+        processor = new OutboxProcessor(eventRepository, productoRepository, inventarioClient, transactionTemplate);
         org.springframework.test.util.ReflectionTestUtils.setField(processor, "maxIntentos", 5);
     }
 
