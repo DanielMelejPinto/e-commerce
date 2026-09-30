@@ -95,6 +95,20 @@ Características principales:
 | React 19, TypeScript, Vite | Frontend (Axios, React Router) |
 | GitHub Actions | CI (`.github/workflows/ci.yml`) |
 
+
+## Inicio rápido con Docker (Recomendado)
+
+Para levantar toda la arquitectura (PostgreSQL, los 4 microservicios Java y el Frontend en React) con un solo comando:
+
+```bash
+cp .env.example .env
+# Ajusta JWT_SECRET en .env si vas a usarlo en producción
+docker compose up --build
+```
+
+- **Frontend**: http://localhost:5173
+- **Swagger UI (Producto)**: http://localhost:8080/swagger-ui/index.html
+
 ## Arquitectura
 
 Cada servicio tiene su propio proyecto Maven y su propia base de datos. El frontend llama a las APIs a través del proxy de Vite.
@@ -553,7 +567,7 @@ El código permite practicar integración entre servicios, pero todavía requier
 | Compensación de pedidos | Si `liberar` falla, el stock queda reservado y solo se escribe en `System.err` | Cola de reintentos o *dead letter*, y registro con logger |
 | Pedidos e idempotencia | Reintentar `POST /api/pedidos` tras un timeout puede reservar dos veces; el estado siempre es `CONFIRMADO` (no hay pago, cancelación ni ciclo de vida) | Clave de idempotencia y estados de pedido |
 | Errores de pedidos | Sin manejador global: errores de otras APIs no se traducen a códigos claros | `@RestControllerAdvice` que mapee stock insuficiente, producto inexistente y servicios caídos |
-| Persistencia | H2 en memoria en los cuatro servicios; PostgreSQL solo opcional en productos | Base persistente para todos y un entorno reproducible (Compose completo) |
+| Persistencia | **¡Resuelto!** Todos los servicios utilizan PostgreSQL mediante Docker Compose | Base persistente para todos y un entorno reproducible (Compose completo) |
 | Stock y catálogo | Inventario no comprueba que el producto exista ni su estado | Definir reglas entre ambos dominios |
 | Esquema | Hibernate `ddl-auto=update`, sin migraciones versionadas | Flyway o Liquibase |
 | Automatización | CI ejecuta los módulos Java; sin frontend ni despliegue | Agregar build/lint del frontend y despliegue |

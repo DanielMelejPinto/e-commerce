@@ -1,0 +1,91 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-ecommerce_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ecommerce_pass}
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ecommerce_user} -d postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  producto-api:
+    build: ./producto-api
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/producto_db
+      - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER:-ecommerce_user}
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD:-ecommerce_pass}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  inventario-api:
+    build: ./inventario-api
+    ports:
+      - "8081:8081"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/inventario_db
+      - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER:-ecommerce_user}
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD:-ecommerce_pass}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  usuario-api:
+    build: ./usuario-api
+    ports:
+      - "8082:8082"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/usuario_db
+      - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER:-ecommerce_user}
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD:-ecommerce_pass}
+      - SEGURIDAD_JWT_SECRET=${JWT_SECRET}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  pedido-api:
+    build: ./pedido-api
+    ports:
+      - "8083:8083"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/pedido_db
+      - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER:-ecommerce_user}
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD:-ecommerce_pass}
+      - SEGURIDAD_JWT_SECRET=${JWT_SECRET}
+      - API_PRODUCTO_URL=http://producto-api:8080/api/productos
+      - API_INVENTARIO_URL=http://inventario-api:8081/api/inventarios
+      - API_USUARIO_URL=http://usuario-api:8082/api/usuarios
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend-app:
+    build: ./frontend-app
+    ports:
+      - "5173:80"
+    depends_on:
+      producto-api:
+        condition: service_healthy
+      inventario-api:
+        condition: service_healthy
+      usuario-api:
+        condition: service_healthy
+      pedido-api:
+        condition: service_healthy
+
+volumes:
+  pgdata:
