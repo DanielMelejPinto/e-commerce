@@ -11,14 +11,16 @@ import java.time.LocalDateTime;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionTemplate;
 
-import io.github.danielmelejpinto.productoapi.client.InventarioClient;
-import io.github.danielmelejpinto.productoapi.exception.InventarioRechazoException;
+
+
 import io.github.danielmelejpinto.productoapi.model.EstadoEvento;
 import io.github.danielmelejpinto.productoapi.model.EstadoProducto;
 import io.github.danielmelejpinto.productoapi.model.OutboxEvent;
 import io.github.danielmelejpinto.productoapi.model.Producto;
 import io.github.danielmelejpinto.productoapi.repository.OutboxEventRepository;
 import io.github.danielmelejpinto.productoapi.repository.ProductoRepository;
+
+import org.springframework.kafka.core.KafkaTemplate;
 
 @Component
 public class OutboxProcessor {
@@ -27,7 +29,7 @@ public class OutboxProcessor {
 
     private final OutboxEventRepository eventRepository;
     private final ProductoRepository productoRepository;
-    private final InventarioClient inventarioClient;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
     private final TransactionTemplate transactionTemplate;
 
     @Value("${outbox.max-intentos:5}")
@@ -35,11 +37,11 @@ public class OutboxProcessor {
 
     public OutboxProcessor(OutboxEventRepository eventRepository, 
                            ProductoRepository productoRepository, 
-                           InventarioClient inventarioClient,
+                           KafkaTemplate<String, Object> kafkaTemplate,
                            TransactionTemplate transactionTemplate) {
         this.eventRepository = eventRepository;
         this.productoRepository = productoRepository;
-        this.inventarioClient = inventarioClient;
+        this.kafkaTemplate = kafkaTemplate;
         this.transactionTemplate = transactionTemplate;
     }
 
@@ -65,8 +67,8 @@ public class OutboxProcessor {
             }
 
             try {
-                // 1. LLAMADA HTTP (Fuera de cualquier transacción de BD)
-                inventarioClient.inicializarInventario(producto.getId());
+                // 1. PUBLICAR EN KAFKA (Fuera de la transacción de BD)
+                kafkaTemplate.send("producto-events", String.valueOf(producto.getId()), producto);
                 
                 // 2. ACTUALIZACIÓN ATÓMICA DE BD LOCAL
                 transactionTemplate.executeWithoutResult(status -> {
@@ -77,17 +79,7 @@ public class OutboxProcessor {
                     eventRepository.save(event);
                 });
                 
-                log.info("Evento {} enviado correctamente para producto {}", event.getId(), producto.getId());
-                
-            } catch (InventarioRechazoException e) {
-                // Rechazo permanente por reglas de negocio (ej. 400 Bad Request)
-                log.error("Rechazo permanente para evento {} del producto {}", event.getId(), producto.getId());
-                transactionTemplate.executeWithoutResult(status -> {
-                    event.setEstado(EstadoEvento.ERROR);
-                    producto.setEstado(EstadoProducto.BAJA);
-                    productoRepository.save(producto);
-                    eventRepository.save(event);
-                });
+                log.info("Evento {} publicado en Kafka para producto {}", event.getId(), producto.getId());
                 
             } catch (Exception e) {
                 // Si llegamos aquí, o la llamada HTTP falló, o la transacción de BD falló.
