@@ -1,36 +1,99 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { pedidoService } from '../../services/pedidoService';
-import type { Pedido, PedidoItem } from '../../types';
+import { productoService } from '../../services/productoService';
+import type { Pedido, Producto } from '../../types';
 import styles from './Profile.module.css';
+
+// Componente interactivo para evitar window.confirm
+const CancelButton = ({ onConfirm, disabled }: { onConfirm: () => void, disabled?: boolean }) => {
+  const [asking, setAsking] = useState(false);
+
+  if (asking) {
+    return (
+      <div style={{ display: 'flex', gap: '10px' }}>
+        <button 
+          onClick={onConfirm} 
+          className={`${styles.cancelButton} ${styles.cancelConfirmButton}`}
+          disabled={disabled}
+        >
+          ¿Seguro? Cancelar
+        </button>
+        <button 
+          onClick={() => setAsking(false)} 
+          className={styles.cancelButton} 
+          style={{ backgroundColor: '#6c757d' }}
+          disabled={disabled}
+        >
+          No
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <button 
+      onClick={() => setAsking(true)} 
+      className={styles.cancelButton}
+      disabled={disabled}
+    >
+      Cancelar Pedido
+    </button>
+  );
+};
 
 const Profile = () => {
   const { user } = useAuth();
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
+  const [productsMap, setProductsMap] = useState<Record<number, string>>({});
   const [loading, setLoading] = useState(true);
+  const [canceling, setCanceling] = useState<number | null>(null);
 
   useEffect(() => {
-    const fetchPedidos = async () => {
+    const fetchData = async () => {
       try {
-        const data = await pedidoService.obtenerMisPedidos();
-        setPedidos(data);
+        const [pedidosData, productosData] = await Promise.all([
+          pedidoService.obtenerMisPedidos(),
+          productoService.obtenerTodos()
+        ]);
+        
+        // Crear mapa de productos para buscar el nombre por ID
+        const pMap: Record<number, string> = {};
+        productosData.forEach((p: Producto) => {
+          pMap[p.id] = p.nombre;
+        });
+
+        // Ordenar pedidos del más nuevo al más viejo
+        const sortedPedidos = pedidosData.sort((a, b) => 
+          new Date(b.fechaCreacion).getTime() - new Date(a.fechaCreacion).getTime()
+        );
+
+        setProductsMap(pMap);
+        setPedidos(sortedPedidos);
       } catch (error) {
-        console.error('Error fetching pedidos', error);
+        console.error('Error fetching data', error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchPedidos();
+    fetchData();
   }, []);
 
   const handleCancelar = async (pedidoId: number) => {
-    if (!window.confirm('¿Estás seguro de que quieres cancelar este pedido?')) return;
+    setCanceling(pedidoId);
     try {
       const pedidoCancelado = await pedidoService.cancelarPedido(pedidoId);
       setPedidos((prev) => prev.map((p) => (p.id === pedidoId ? pedidoCancelado : p)));
-    } catch (error) {
-      alert('Error al cancelar el pedido');
+    } catch (error: unknown) {
+      if (typeof error === 'object' && error !== null && 'response' in error) {
+        const err = error as { response?: { data?: { message?: string } } };
+        alert(err.response?.data?.message || 'Error al cancelar el pedido');
+      } else {
+        alert('Error al cancelar el pedido');
+      }
+    } finally {
+      setCanceling(null);
     }
   };
 
@@ -46,9 +109,9 @@ const Profile = () => {
       </div>
 
       <div className={styles.ordersSection}>
-        <h2>Mis Pedidos</h2>
+        <h2>Historial de Pedidos</h2>
         {loading ? (
-          <p>Cargando pedidos...</p>
+          <p>Cargando historial...</p>
         ) : pedidos.length === 0 ? (
           <p>No has realizado ningún pedido aún.</p>
         ) : (
@@ -62,23 +125,25 @@ const Profile = () => {
                   </span>
                 </div>
                 <div className={styles.orderDetails}>
-                  <p><strong>Fecha:</strong> {new Date(pedido.fechaCreacion).toLocaleDateString()}</p>
+                  <p><strong>Fecha:</strong> {new Date(pedido.fechaCreacion).toLocaleString()}</p>
                   <p><strong>Total:</strong> ${pedido.total.toFixed(2)}</p>
                 </div>
                 <div className={styles.orderItems}>
                   <h4>Productos:</h4>
-                  <ul>
-                    {pedido.items.map((item: PedidoItem, idx: number) => (
-                      <li key={idx}>
-                        Producto ID: {item.productoId} x {item.cantidad} (${item.precioUnitario.toFixed(2)})
-                      </li>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                    {pedido.items.map((item, idx) => (
+                      <div key={idx} className={styles.itemDetailRow}>
+                        <span>{item.cantidad}x {productsMap[item.productoId] || `Producto #${item.productoId}`}</span>
+                        <span>${(item.precioUnitario * item.cantidad).toFixed(2)}</span>
+                      </div>
                     ))}
-                  </ul>
+                  </div>
                 </div>
                 {pedido.estado === 'CONFIRMADO' && (
-                  <button onClick={() => handleCancelar(pedido.id)} className={styles.cancelButton}>
-                    Cancelar Pedido
-                  </button>
+                  <CancelButton 
+                    onConfirm={() => handleCancelar(pedido.id)} 
+                    disabled={canceling === pedido.id}
+                  />
                 )}
               </div>
             ))}

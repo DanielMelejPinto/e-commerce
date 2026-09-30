@@ -113,3 +113,22 @@
 .cancelButton:hover {
   background-color: #c82333;
 }
+
+/* Nuevos estilos para botón cancelar */
+.cancelConfirmButton {
+  background-color: #ffc107;
+  color: #212529;
+}
+.cancelConfirmButton:hover {
+  background-color: #e0a800;
+}
+
+.itemDetailRow {
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 1px dashed #dee2e6;
+  padding: 0.25rem 0;
+}
+.itemDetailRow:last-child {
+  border-bottom: none;
+}
