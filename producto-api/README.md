@@ -1,172 +1,172 @@
 # producto-api
 
-Microservicio REST desarrollado con **Java 21** y **Spring Boot 4** para la gestión de un catálogo de productos. Al crear un producto avisa a [`inventario-api`](../inventario-api) para que inicialice su inventario. Proyecto de práctica orientado a aplicar buenas prácticas de arquitectura, validación, manejo de errores, pruebas y documentación de APIs.
+Microservicio REST de catálogo de productos, con **Java 21** y **Spring Boot 4.1.1**. Al crear un producto, [`inventario-api`](../inventario-api) inicializa su inventario mediante el patrón **Transactional Outbox**. Forma parte del [e-commerce](../README.md) y es consumido por [`pedido-api`](../pedido-api) (precio actual) y por el [frontend](../frontend-app).
 
 ## Stack técnico
 
-- **Java 21**
-- **Spring Boot 4.1** (Web, Data JPA, Validation)
-- **PostgreSQL 17** (persistencia en el perfil `docker`)
-- **H2** (base de datos en memoria para desarrollo rápido y tests) + consola web en `dev`
-- **springdoc-openapi** (documentación interactiva con Swagger UI)
-- **Datafaker** (datos de prueba en `dev`)
-- **JUnit 5 + Mockito + MockMvc** (tests de controller, service y manejo de errores)
-- **Docker Compose** (para levantar PostgreSQL localmente)
+- **Java 21** y **Spring Boot 4.1.1** (Web MVC, Data JPA, Validation)
+- **PostgreSQL 17** (perfil `docker`) y **H2** en memoria (desarrollo y pruebas)
+- **springdoc-openapi** (Swagger UI) y **Datafaker** (datos de ejemplo en `dev`)
+- **JUnit 5 + Mockito + MockMvc** (pruebas)
+- **Docker Compose** (PostgreSQL local)
 
 ## Características
 
-- CRUD completo de productos (`crear`, `listar`, `obtener por id`, `actualizar`, `eliminar`)
-- Paginación y ordenamiento configurables vía query params (con lista blanca de campos)
-- Validación de datos de entrada con mensajes de error claros
-- Control de concurrencia optimista (`@Version`) en las actualizaciones
-- Integración con `inventario-api` con timeouts (2 s para conectar, 5 s para leer)
-- Manejo centralizado de excepciones (`@RestControllerAdvice`), sin exponer detalles internos al cliente
-- Documentación interactiva de la API con Swagger UI
-- Tres perfiles: `dev` (H2 + datos de prueba), `docker` (PostgreSQL) y `test` (H2 vacío, solo para tests)
+- Crear, listar, consultar, actualizar y dar de baja productos (`nombre`, `precio`, `descripcion` e `imagenUrl` opcionales).
+- Estados `PENDIENTE`, `ACTIVO` y `BAJA`; el `DELETE` es un **borrado lógico** (pasa a `BAJA`).
+- Paginación y orden con lista blanca de campos.
+- Validación de entrada y manejo centralizado de errores en JSON (`@RestControllerAdvice`), sin exponer detalles internos.
+- Control de concurrencia optimista (`@Version`).
+- Integración con inventario mediante Outbox, con timeouts (2 s de conexión, 5 s de lectura) y hasta 5 reintentos por evento.
+- Tres perfiles: `dev` (H2 + datos de ejemplo + consola H2), `docker` (PostgreSQL) y `test` (H2 vacía).
 
 ## Requisitos
 
-- Java 21 (Maven no hace falta instalarlo: el proyecto incluye `mvnw`)
-- Docker, solo si vas a usar el perfil `docker`
-- `inventario-api` corriendo en el puerto 8081, solo para **crear** productos (ver [Integración con inventario-api](#integración-con-inventario-api))
+- Java 21 (Maven no hace falta: el proyecto incluye `mvnw`).
+- Docker, solo para el perfil `docker`.
+- [`inventario-api`](../inventario-api) en el puerto 8081 para que los productos **creados** pasen de `PENDIENTE` a `ACTIVO`.
 
 ## Cómo levantar el proyecto
 
 ### Opción 1 — Desarrollo rápido (H2 en memoria)
 
-No requiere nada más instalado que Java 21. Los datos no persisten entre reinicios.
-
 ```bash
 ./mvnw spring-boot:run
 ```
 
-La app queda disponible en `http://localhost:8080`. Por defecto usa el perfil `dev`, que además:
+Queda en `http://localhost:8080` con el perfil `dev`, que además:
 
-- carga **20 productos de prueba** con Datafaker (solo si la tabla está vacía),
-- muestra el SQL de Hibernate en consola,
-- habilita la consola de H2 en `http://localhost:8080/h2-console` (JDBC URL `jdbc:h2:mem:productodb`, usuario `sa`, contraseña vacía).
+- inserta **20 productos de ejemplo** si la tabla está vacía,
+- muestra el SQL de Hibernate,
+- habilita la consola H2 en `http://localhost:8080/h2-console` (URL `jdbc:h2:mem:productodb`, usuario `sa`, contraseña vacía).
 
-> **Nota:** los productos de prueba se insertan directo en la base y no pasan por `POST /api/productos`, así que **no tienen inventario** en `inventario-api` (consultarlo da 404). Es lo esperado.
+> Los productos de ejemplo se insertan directo en la base: **no pasan por el Outbox ni tienen inventario** (consultarlo da `404`). Es lo esperado.
 
 ### Opción 2 — Con PostgreSQL (perfil `docker`)
 
-1. Copia `.env.example` a `.env` y define tus propias credenciales:
+1. Copia `.env.example` a `.env` y cambia `POSTGRES_PASSWORD`:
 
    ```bash
    cp .env.example .env
    ```
 
-2. Levanta la base de datos:
+2. Levanta la base de datos y comprueba que esté saludable:
 
    ```bash
    docker compose up -d
+   docker compose ps
    ```
 
-3. Corre la aplicación con el perfil `docker`, exportando las mismas variables del `.env`:
+3. Inicia la aplicación exportando las variables del `.env`:
 
    ```bash
-   export $(cat .env | xargs) && ./mvnw spring-boot:run -Dspring-boot.run.profiles=docker
+   set -a
+   source ./.env
+   set +a
+   ./mvnw spring-boot:run -Dspring-boot.run.profiles=docker
    ```
 
-En este perfil la base arranca vacía (sin datos de prueba) y los datos persisten en el volumen `producto-data`, incluso si reinicias la app o borras el contenedor. Para apagar la base: `docker compose down` (con `-v` se borran también los datos).
+   Si la contraseña tiene caracteres especiales, escríbela entre comillas simples en el `.env`.
+
+En este perfil la base parte vacía (sin datos de ejemplo) y los datos persisten en el volumen `producto-data`. Para apagar: `docker compose down` (con `-v` se borran también los datos).
 
 ## Configuración
 
-| Propiedad / variable | Valor por defecto | Descripción |
+| Propiedad / variable | Predeterminado | Descripción |
 |---|---|---|
 | `server.port` | `8080` | Puerto de la API |
-| `inventario.api.url` (env: `INVENTARIO_API_URL`) | `http://localhost:8081` | URL base de `inventario-api` |
-| `inventario.api.connect-timeout-ms` | `2000` | Timeout de conexión a inventario-api (ms) |
-| `inventario.api.read-timeout-ms` | `5000` | Timeout de lectura a inventario-api (ms) |
+| `inventario.api.url` (`INVENTARIO_API_URL`) | `http://localhost:8081` | URL base de `inventario-api` |
+| `inventario.api.connect-timeout-ms` | `2000` | Timeout de conexión (ms) |
+| `inventario.api.read-timeout-ms` | `5000` | Timeout de lectura (ms) |
+| `outbox.max-intentos` | `5` | Reintentos máximos por evento |
 | `spring.data.web.pageable.max-page-size` | `50` | Tamaño máximo de página (si piden más, se recorta) |
 | `POSTGRES_HOST` | `localhost` | Host de PostgreSQL (perfil `docker`) |
 | `POSTGRES_DB` | `productodb` | Base de datos (perfil `docker`) |
 | `POSTGRES_USER` | `producto` | Usuario (perfil `docker`) |
-| `POSTGRES_PASSWORD` | *(obligatoria)* | Contraseña (perfil `docker`), se define en `.env` |
+| `POSTGRES_PASSWORD` | *(obligatoria)* | Contraseña (perfil `docker`), definida en `.env` |
+
+El intervalo del procesador Outbox (5000 ms) está fijo en el código.
 
 ## Documentación de la API
 
-Con la app corriendo, la documentación interactiva está disponible en:
-
-```
-http://localhost:8080/swagger-ui.html
-```
+Con la app corriendo: `http://localhost:8080/swagger-ui.html` (OpenAPI en `/v3/api-docs`).
 
 ## Endpoints
 
-| Método   | Ruta                  | Descripción                             | Respuestas                  |
-|----------|-----------------------|-----------------------------------------|-----------------------------|
-| `POST`   | `/api/productos`      | Crear un producto                       | `201`, `400`                |
-| `GET`    | `/api/productos`      | Listar productos (paginado y ordenable) | `200`, `400`                |
-| `GET`    | `/api/productos/{id}` | Obtener un producto por id              | `200`, `400`, `404`         |
-| `PUT`    | `/api/productos/{id}` | Actualizar un producto                  | `200`, `400`, `404`, `409`  |
-| `DELETE` | `/api/productos/{id}` | Eliminar un producto                    | `204`, `404`                |
+| Método | Ruta | Descripción | Respuestas |
+|---|---|---|---|
+| `POST` | `/api/productos` | Crear un producto (queda `PENDIENTE`) | `201`, `400` |
+| `GET` | `/api/productos` | Listar productos activos (paginado y ordenable) | `200`, `400` |
+| `GET` | `/api/productos/{id}` | Obtener un producto `PENDIENTE` o `ACTIVO` | `200`, `400`, `404` |
+| `PUT` | `/api/productos/{id}` | Actualizar un producto | `200`, `400`, `404`, `409` |
+| `DELETE` | `/api/productos/{id}` | Dar de baja (borrado lógico) | `204`, `400`, `404`, `409` |
 
-**Paginación y orden** (`GET /api/productos`): acepta `?page`, `?size` (máx. 50) y `?sort` (`id`, `nombre`, `precio`, `fechaCreacion`). Ejemplo: `?sort=precio,desc`.
+**Paginación y orden** (`GET /api/productos`): `?page` (desde 0), `?size` (por defecto 10, máx. 50) y `?sort` (`id`, `nombre`, `precio`, `fechaCreacion`). Ejemplo: `?sort=precio,desc`.
 
-**Validaciones** del producto: `nombre` obligatorio (máx. 150 caracteres) y `precio` obligatorio, mayor a cero, con hasta 10 enteros y 2 decimales.
+**Validaciones:** `nombre` obligatorio (máx. 150 caracteres); `precio` obligatorio, mayor a cero, hasta 10 enteros y 2 decimales; `descripcion` e `imagenUrl` opcionales.
 
 ### Ejemplo — crear un producto
 
 ```bash
 curl -X POST http://localhost:8080/api/productos \
   -H "Content-Type: application/json" \
-  -d '{"nombre": "Teclado mecánico", "precio": 49.90}'
+  -d '{"nombre": "Teclado mecánico", "precio": 49.90, "descripcion": "Teclado RGB", "imagenUrl": "https://ejemplo.com/teclado.jpg"}'
 ```
 
-Respuesta (`201 Created`, con header `Location` apuntando al nuevo recurso):
+Respuesta (`201 Created`, con header `Location` hacia el nuevo recurso):
 
 ```json
 {
   "id": 1,
   "nombre": "Teclado mecánico",
   "precio": 49.90,
-  "fechaCreacion": "2026-09-28T02:15:00"
+  "descripcion": "Teclado RGB",
+  "imagenUrl": "https://ejemplo.com/teclado.jpg",
+  "fechaCreacion": "2026-09-28T02:15:00",
+  "estado": "PENDIENTE"
 }
 ```
 
-## Integración con inventario-api (Patrón Outbox)
+## Integración con inventario-api (Outbox)
 
-Al crear un producto, `producto-api` debe notificar a `inventario-api` para que inicialice el stock (POST a `/api/inventarios/producto/{id}`). Para evitar problemas de transacciones distribuidas y bloqueos si `inventario-api` está lento o caído, se implementó el **Patrón Outbox**:
+Al crear un producto, `producto-api` debe pedir a `inventario-api` que inicialice el stock (`POST /api/inventarios/producto/{id}`). Para no depender de una transacción distribuida ni bloquear al cliente si inventario está lento o caído:
 
-1. Al crear el producto, se guarda en la base de datos local con estado `PENDIENTE` junto con un evento de creación en la tabla `outbox_events` (misma transacción local).
-2. Un proceso en segundo plano (job planificado) lee periódicamente los eventos pendientes.
-3. El proceso llama a `inventario-api`.
-   - Si tiene éxito, marca el evento como `ENVIADO` y el producto cambia a estado `ACTIVO`.
-   - Si falla temporalmente (error de red o 5xx), reintenta en la siguiente ejecución.
-   - Si el inventario rechaza definitivamente la petición (4xx), el producto cambia a estado `BAJA`.
+1. Se guarda el producto (`PENDIENTE`) y un evento de creación en `outbox_events`, en la misma transacción local.
+2. Un proceso planificado (`@Scheduled(fixedDelay = 5000)`) lee los eventos pendientes.
+3. Llama a `inventario-api` y actualiza los estados:
+
+| Resultado | Producto | Evento |
+|---|---|---|
+| Éxito | `ACTIVO` | `ENVIADO` |
+| Rechazo `4xx` | `BAJA` | `ERROR` |
+| Error de red, timeout o `5xx` | Sin cambios | Pendiente, aumenta `intentos` |
+| Producto dado de baja antes de procesarse | `BAJA` | `ENVIADO`, sin llamar a inventario |
 
 **Notas de negocio:**
-- Un producto en estado `PENDIENTE` o `BAJA` **no** aparece en el listado (`GET /api/productos`).
-- El borrado de un producto (`DELETE`) ahora es un **borrado lógico** (cambia a `BAJA`), para no romper la integridad referencial de futuros pedidos.
 
-Los timeouts son configurables y evitan colapsar el sistema si la red está lenta.
+- Un producto `PENDIENTE` o `BAJA` **no** aparece en el listado.
+- Un producto `BAJA` responde `404` en consulta y actualización por ID.
+- La baja **no elimina el inventario**: el `DELETE` de inventario es independiente.
+- Consistencia eventual: un `201` no garantiza que el inventario ya exista.
 
 ## Manejo de errores
 
-Todas las respuestas de error son JSON. Los errores de validación devuelven un mapa `campo → mensaje` (`400 Bad Request`):
+Los errores de validación devuelven `400` con un mapa `campo → mensaje`; el resto usa `{"error": "..."}`.
 
 ```json
-{
-  "nombre": "El nombre es obligatorio",
-  "precio": "El precio debe ser mayor a cero"
-}
+{ "nombre": "El nombre es obligatorio", "precio": "El precio debe ser mayor a cero" }
 ```
 
-El resto usa la forma `{"error": "..."}`. Por ejemplo, al pedir un producto que no existe (`404 Not Found`):
-
 ```json
-{
-  "error": "Producto con id 99 no existe"
-}
+{ "error": "Producto con id 99 no existe" }
 ```
 
 | Código | Cuándo ocurre |
 |---|---|
 | `400` | Datos inválidos, JSON mal formado, id no numérico o `sort` por un campo no permitido |
-| `404` | El producto no existe |
-| `409` | Dos operaciones modificaron el mismo producto a la vez (`@Version`); reintenta |
-| `500` | Error inesperado. El detalle va al log del servidor, nunca al cliente |
+| `404` | El producto no existe o está dado de baja |
+| `409` | Conflicto de concurrencia (`@Version`); reintenta |
+| `500` | Error inesperado; el detalle va al log del servidor |
 
 ## Correr los tests
 
@@ -174,35 +174,36 @@ El resto usa la forma `{"error": "..."}`. Por ejemplo, al pedir un producto que 
 ./mvnw test
 ```
 
-Los tests usan el perfil `test`: H2 en memoria y **vacía** (sin datos de prueba ni salida de SQL) y `inventario-api` simulado con Mockito. No necesitan Docker ni ninguna otra API levantada.
+Usan el perfil `test`: H2 vacía y `inventario-api` simulado con Mockito. **No necesitan Docker ni otra API levantada.**
 
-| Clase | Qué cubre | Tests |
-|---|---|---|
-| `ProductoControllerTest` | Endpoints, validaciones, paginación, orden y ciclo de vida de PENDIENTE a ACTIVO/BAJA | 30 |
-| `ProductoServiceTest` | Lógica de negocio con repositorio simulado | 14 |
-| `GlobalExceptionHandlerTest` | Respuesta `409` ante conflicto de concurrencia | 1 |
-| `InventarioClientTest` | Timeout y mapeo de excepciones del RestClient | 4 |
-| `OutboxProcessorTest` | Lógica de reintentos y actualización de estados | 4 |
-| `DocumentacionApiTest` | Que el OpenAPI se genere y describa los endpoints | 1 |
-| `ProductoApiApplicationTests` | Que el contexto de Spring arranque | 1 |
+| Clase | Qué cubre |
+|---|---|
+| `ProductoControllerTest` | Endpoints, validaciones, paginación, orden y ciclo `PENDIENTE` → `ACTIVO`/`BAJA` |
+| `ProductoServiceTest` | Lógica de negocio con repositorio simulado |
+| `GlobalExceptionHandlerTest` | Respuestas ante conflictos de concurrencia |
+| `InventarioClientTest` | Timeouts y mapeo de excepciones del cliente HTTP |
+| `OutboxProcessorTest` | Reintentos y actualización de estados |
+| `DocumentacionApiTest` | Generación del OpenAPI |
+| `ProductoApiApplicationTests` | Arranque del contexto de Spring |
 
 ## Estructura del proyecto
 
 ```
 src/main/java/io/github/danielmelejpinto/productoapi/
+├── client/         # Cliente HTTP hacia inventario-api
+├── config/         # OpenAPI, RestClient con timeouts y seeder de dev
 ├── controller/     # Endpoints REST
-├── service/        # Lógica de negocio
+├── dto/            # Objetos de entrada/salida
+├── exception/      # Excepciones y manejo global
+├── model/          # Entidades JPA (Producto, OutboxEvent) y enums de estado
 ├── repository/     # Acceso a datos (Spring Data JPA)
-├── model/          # Entidades JPA
-├── dto/            # Objetos de entrada/salida (Request/Response)
-├── exception/      # Excepciones personalizadas y manejo global
-└── config/         # OpenAPI/Swagger, RestTemplate con timeouts y seeder de dev
+└── service/        # Lógica de negocio y OutboxProcessor
 
 src/main/resources/
 ├── application.properties          # Configuración común
-├── application-dev.properties      # Perfil dev (H2, SQL visible, consola H2)
+├── application-dev.properties      # Perfil dev (SQL visible, consola H2)
 ├── application-docker.properties   # Perfil docker (PostgreSQL)
-└── META-INF/additional-spring-configuration-metadata.json   # Describe inventario.api.url para el IDE
+└── META-INF/additional-spring-configuration-metadata.json
 
 src/test/resources/
 └── application-test.properties     # Perfil test (H2 vacía)
@@ -210,9 +211,11 @@ src/test/resources/
 
 ## Limitaciones conocidas
 
-- **Sin autenticación ni autorización.**
-- Swagger UI y la consola de H2 están habilitados por defecto; el proyecto está pensado para desarrollo local, no para producción tal cual.
+- **Sin autenticación ni autorización:** cualquiera con acceso al puerto 8080 puede crear, modificar o dar de baja productos.
+- Swagger UI y la consola H2 están habilitados por defecto: pensado para desarrollo local.
+- El Outbox procesa eventos de forma secuencial y sin espera progresiva; no está preparado para varias instancias.
+- Los productos `dev` de ejemplo no tienen inventario.
 
 ## Autor
 
-**Daniel Melej Pinto**
+**Daniel Melej Pinto** · [GitHub](https://github.com/DanielMelejPinto)
