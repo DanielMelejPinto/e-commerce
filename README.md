@@ -14,13 +14,16 @@ Sistema de e-commerce con **cuatro microservicios** en **Java 21 y Spring Boot 4
 
 Características principales:
 
-- **Transactional Outbox** entre `producto-api` e `inventario-api`: el producto se guarda y el inventario se inicializa de forma asíncrona.
-- **Autenticación con JWT** (`usuario-api` emite el token; `pedido-api` lo valida con el mismo secreto).
+- **Transactional Outbox** entre `producto-api` e `inventario-api`: el producto se guarda y el inventario se inicializa de forma asíncrona, con **ShedLock** para coordinación distribuida y **backoff exponencial** en reintentos.
+- **Autenticación con JWT** (`usuario-api` emite el token; los demás servicios lo validan con el mismo secreto).
 - **Saga compensatoria** en `pedido-api`: si un pedido falla a mitad de camino, libera el stock ya reservado.
+- **Idempotencia** en creación de pedidos: cabecera `Idempotency-Key` evita duplicar reservas de stock.
+- **Cancelación de pedidos** con compensación automática de stock.
 - **Concurrencia optimista** (`@Version`) y **reserva atómica** de stock en base de datos.
-- **CI** en GitHub Actions: `./mvnw -B verify` para los cuatro módulos.
+- **Observabilidad** con Spring Boot Actuator y Prometheus.
+- **CI** en GitHub Actions: backend (`./mvnw -B verify`) y frontend (`npm run lint && npm run build`).
 
-**Estado:** proyecto de práctica en desarrollo. Cubre catálogo, inventario, usuarios, pedidos y un frontend básico (catálogo, login/registro, carrito, historial de pedidos y administración de productos). Ver [límites actuales](#límites-actuales-y-mejoras-propuestas).
+**Estado:** proyecto de portafolio en desarrollo activo. Cubre catálogo, inventario, usuarios, pedidos, cancelaciones, idempotencia, observabilidad y un frontend completo (catálogo, login/registro, carrito, historial de pedidos con cancelación y administración de productos). Ver [límites actuales](#límites-actuales-y-mejoras-propuestas).
 
 ## Contenido
 
@@ -67,6 +70,8 @@ Características principales:
 ### Pedidos (`pedido-api`)
 
 - Creación de pedidos autenticados: consulta el precio real en `producto-api`, reserva stock en `inventario-api` y guarda el pedido como `CONFIRMADO`.
+- **Idempotencia**: cabecera opcional `Idempotency-Key` para evitar reservas duplicadas por reintentos del cliente.
+- **Cancelación**: endpoint `POST /api/pedidos/{id}/cancelar` que cambia el estado a `CANCELADO` y libera el stock reservado.
 - Compensación: si falla un ítem, libera el stock de los ítems ya reservados.
 - Listado de los pedidos del usuario autenticado.
 
@@ -94,6 +99,9 @@ Características principales:
 | Docker Compose | Base de datos local de productos |
 | React 19, TypeScript, Vite | Frontend (Axios, React Router) |
 | GitHub Actions | CI (`.github/workflows/ci.yml`) |
+| Micrometer + Prometheus | Métricas de los microservicios (`/actuator/prometheus`) |
+| ShedLock | Bloqueo distribuido del procesador Outbox |
+| Flyway | Migraciones de esquema versionadas |
 
 
 ## Inicio rápido con Docker (Recomendado)
@@ -108,6 +116,7 @@ docker compose up --build
 
 - **Frontend**: http://localhost:5173
 - **Swagger UI (Producto)**: http://localhost:8080/swagger-ui/index.html
+- **Prometheus**: http://localhost:9090
 
 ## Arquitectura
 
@@ -146,7 +155,7 @@ flowchart TD
 | Producto dado de baja antes del procesamiento | `BAJA` | `ENVIADO`, sin llamar a inventario |
 | Producto ausente en la base local | No aplica | `ERROR` |
 
-El procesador usa `@Scheduled(fixedDelay = 5000)`: espera cinco segundos **después de terminar cada ejecución** y procesa los eventos de forma secuencial. Esto introduce **consistencia eventual**: un `201` confirma que se guardó el producto, no que el inventario ya esté disponible.
+El procesador usa `@Scheduled(fixedDelay = 5000)` con `@SchedulerLock` de **ShedLock**: si hay varias instancias de `producto-api`, solo una ejecuta el procesador a la vez. Además, ante fallos temporales aplica **backoff exponencial** (2s, 4s, 8s, 16s…) para no saturar servicios caídos. Esto introduce **consistencia eventual**: un `201` confirma que se guardó el producto, no que el inventario ya esté disponible.
 
 ### Visibilidad y bajas
 
@@ -360,6 +369,9 @@ Agregar, reservar y liberar reciben `{"cantidad": 10}`. La idempotencia es solo 
 | --- | --- | --- | --- |
 | `POST` | `/api/pedidos` | Crear un pedido del usuario autenticado | `201`, `400` |
 | `GET` | `/api/pedidos/mis-pedidos` | Listar los pedidos del usuario autenticado | `200` |
+| `POST` | `/api/pedidos/{id}/cancelar` | Cancelar un pedido `CONFIRMADO` y liberar stock | `200`, `400`, `404` |
+
+La creación de pedidos acepta una cabecera opcional `Idempotency-Key` (UUID). Si la misma clave se envía dos veces, la segunda llamada devuelve el pedido original sin volver a reservar stock.
 
 ## Ejemplo de uso
 
@@ -531,7 +543,7 @@ Los errores de validación devuelven `400` con un mapa campo → mensaje; las ex
 | `409` | Stock insuficiente, conflicto de concurrencia, email ya registrado o restricción de integridad |
 | `500` | Error inesperado; el detalle se registra en el servidor |
 
-`pedido-api` no tiene manejador global de excepciones: los errores de `producto-api` o `inventario-api` (por ejemplo, stock insuficiente) no se traducen a un código propio. Ver su [README](pedido-api/README.md).
+`pedido-api` tiene un `@RestControllerAdvice` global que traduce errores de servicios dependientes: `404` para producto no encontrado, `409` para stock insuficiente, `400` para errores de cliente propagados y `503` para fallos de conexión.
 
 ## Pruebas y CI
 
@@ -550,33 +562,39 @@ Para compilar, probar y generar los JAR: `./mvnw clean verify` dentro de cada m�
 - En inventario, `InventarioControllerTest` y `InventarioApiApplicationTests` usan PostgreSQL 17 con Testcontainers y `disabledWithoutDocker = true`: **sin Docker se omiten**. Un resultado exitoso con pruebas omitidas no confirma la integración ni la concurrencia sobre PostgreSQL; revisa la salida de Maven o `target/surefire-reports/`.
 - El frontend no tiene pruebas automatizadas; `npm run lint` ejecuta Oxlint y `npm run build` valida TypeScript.
 
-**CI:** el workflow `.github/workflows/ci.yml` corre en cada push y pull request a `main`, con una matriz de los cuatro módulos (`ubuntu-24.04`, JDK 21 Temurin, `./mvnw -B verify`). No incluye el frontend ni despliegue.
+**CI:** el workflow `.github/workflows/ci.yml` corre en cada push y pull request a `main`. Incluye dos jobs paralelos: una **matriz de los cuatro módulos Java** (`ubuntu-24.04`, JDK 21 Temurin, `./mvnw -B verify`) y un **job de frontend** (`Node.js 22`, `npm ci`, `npm run lint`, `npm run build`).
 
 ## Límites actuales y mejoras propuestas
 
 El código permite practicar integración entre servicios, pero todavía requiere trabajo para producción.
 
+### ✅ Mejoras implementadas
+
+| Área | Solución |
+| --- | --- |
+| Acceso a producto e inventario | Todos los microservicios validan el JWT de `usuario-api`. La escritura exige rol `ADMIN` y las lecturas son públicas o autenticadas |
+| Rol de administrador | El token JWT incluye el rol y existe un `AdminSeeder` para crear el primer administrador seguro |
+| Compensación de pedidos | Usa `slf4j` logger y libera el stock ya reservado en caso de fallo parcial |
+| Ciclo de vida del pedido | Endpoint `POST /api/pedidos/{id}/cancelar` con compensación de stock |
+| Idempotencia en pedidos | Cabecera `Idempotency-Key` evita duplicar reservas de stock |
+| Errores de pedidos | `@RestControllerAdvice` global traduce errores (404, 409, 503) |
+| Clasificación HTTP | Los clientes HTTP propagan errores `4xx` en lugar de enmascararlos como `503` |
+| Persistencia | Todos los servicios utilizan PostgreSQL mediante Docker Compose |
+| Esquema | Flyway para migraciones versionadas con validación |
+| Observabilidad | Spring Boot Actuator + Micrometer + Prometheus (`/actuator/prometheus`) |
+| Frontend (API Layers & CI) | Axios interceptors tipados, servicios desacoplados y GitHub Actions con Node.js |
+| Coordinación del Outbox | ShedLock garantiza que solo una instancia procese eventos a la vez |
+| Reintentos del Outbox | Backoff exponencial (`2^intentos` segundos) y campo `proximoReintento` |
+
+### 🔧 Pendientes para producción
+
 | Área | Situación actual | Mejora propuesta |
 | --- | --- | --- |
-| Acceso a producto e inventario | **¡Resuelto!** Todos los microservicios validan el JWT de `usuario-api`. La escritura exige rol `ADMIN` y las lecturas son seguras o públicas | Validar el JWT y exigir rol `ADMIN` en las operaciones de escritura |
-| Rol de administrador | **¡Resuelto!** El token JWT incluye el rol y existe un `AdminSeeder` para crear el primer administrador seguro | Autorizar por rol en el backend y definir cómo se asigna |
-| Secreto JWT | Secreto compartido por variable de entorno; `pedido-api` no arranca sin él y la clave por defecto de `usuario-api` es pública | Gestionar el secreto fuera del repositorio; considerar claves asimétricas |
-| Finalización del Outbox | Producto y evento se guardan por separado; el evento no tiene bloqueo ni versión | Hacer atómica la actualización final y coordinar varias instancias |
-| Reintentos del Outbox | Límite de 5 intentos, pero consulta todos los pendientes y sin espera progresiva | Procesar por lotes, espera progresiva y reproceso manual |
-| Clasificación HTTP en Pedidos | **¡Resuelto!** Ahora los clientes HTTP propagan errores 4xx (como 404 y 400) en lugar de enmascararlos como 503 Service Unavailable | | 
-
-| Clasificación HTTP | Todos los `4xx` de inventario se consideran permanentes | Distinguir errores de contrato de respuestas recuperables como `429` |
-| Compensación de pedidos | **¡Resuelto!** Usa `slf4j` logger en vez de `System.err` | Cola de reintentos o *dead letter* |
-| Ciclo de vida del pedido | **¡Resuelto!** Ya hay un endpoint para cancelar pedidos y se compensa el stock en inventario-api | |
-| Observabilidad (Actuator) | **¡Resuelto!** Todos los microservicios exponen /actuator/prometheus y docker-compose orquesta a Prometheus | | 
-| Frontend (API Layers & CI) | **¡Resuelto!** Axios interceptors tipados y GitHub Actions con Node.js validando `npm run lint` y `build` | | 
-
-| Idempotencia en pedidos | **¡Resuelto!** Se procesa la cabecera `Idempotency-Key` y se evita la duplicación de reservas de stock | Usar clave de idempotencia (Idempotency-Key) |
-| Errores de pedidos | **¡Resuelto!** Se agregó un `@RestControllerAdvice` global que traduce los errores (404, 409, 503) | Manejo de excepciones unificado |
-| Persistencia | **¡Resuelto!** Todos los servicios utilizan PostgreSQL mediante Docker Compose | Base persistente para todos y un entorno reproducible (Compose completo) |
+| Secreto JWT | Secreto compartido por variable de entorno; `pedido-api` no arranca sin él | Gestionar el secreto fuera del repositorio; considerar claves asimétricas |
+| Clasificación HTTP avanzada | Todos los `4xx` de inventario se consideran permanentes | Distinguir errores recuperables como `429` |
 | Stock y catálogo | Inventario no comprueba que el producto exista ni su estado | Definir reglas entre ambos dominios |
-| Esquema | **¡Resuelto!** Todos los servicios utilizan Flyway para migraciones versionadas con validación | Migraciones con Flyway |
-| Automatización | CI ejecuta los módulos Java; sin frontend ni despliegue | Agregar build/lint del frontend y despliegue |
+| Compensación robusta | La liberación de stock es de mejor esfuerzo | Cola de reintentos o *dead letter* |
+| Tests E2E | Solo hay tests unitarios y de integración parciales | Tests end-to-end con Testcontainers Compose |
 
 La inicialización idempotente facilita reintentar entregas, pero el Outbox actual no garantiza procesamiento exactamente una vez. Las mejoras de esta sección son propuestas, no funcionalidades implementadas.
 
