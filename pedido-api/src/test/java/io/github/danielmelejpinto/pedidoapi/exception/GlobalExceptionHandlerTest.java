@@ -55,4 +55,15 @@ class GlobalExceptionHandlerTest {
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().get("error")).isEqualTo("Error interno del servidor");
     }
+
+    @Test
+    void manejarDependenciaCliente_retorna400() {
+        DependenciaClienteException ex = new DependenciaClienteException("Inventario rechazo por req malo", org.springframework.http.HttpStatus.BAD_REQUEST);
+        
+        ResponseEntity<Map<String, String>> response = handler.manejarDependenciaCliente(ex);
+        
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().get("error")).isEqualTo("Inventario rechazo por req malo");
+    }
 }

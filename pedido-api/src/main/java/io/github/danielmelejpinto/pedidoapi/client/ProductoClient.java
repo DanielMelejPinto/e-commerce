@@ -2,6 +2,7 @@ package io.github.danielmelejpinto.pedidoapi.client;
 
 import io.github.danielmelejpinto.pedidoapi.client.dto.ProductoDTO;
 import io.github.danielmelejpinto.pedidoapi.config.ApiProperties;
+import io.github.danielmelejpinto.pedidoapi.exception.DependenciaClienteException;
 import io.github.danielmelejpinto.pedidoapi.exception.ProductoNoEncontradoException;
 import io.github.danielmelejpinto.pedidoapi.exception.ServicioDependienteException;
 import org.springframework.stereotype.Component;
@@ -26,7 +27,7 @@ public class ProductoClient {
                     if (response.getStatusCode().value() == 404) {
                         throw new ProductoNoEncontradoException("Producto no encontrado: " + id);
                     }
-                    throw new ServicioDependienteException("Error de cliente al consultar producto " + id + ": " + response.getStatusCode());
+                    throw new DependenciaClienteException("Error de cliente al consultar producto " + id + ": " + response.getStatusCode(), response.getStatusCode());
                 })
                 .onStatus(status -> status.is5xxServerError(), (request, response) -> {
                     throw new ServicioDependienteException("Error del servidor al consultar producto " + id);

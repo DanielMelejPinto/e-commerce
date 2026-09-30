@@ -57,6 +57,14 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(Map.of("error", ex.getMessage()));
     }
 
+    @ExceptionHandler(DependenciaClienteException.class)
+    public ResponseEntity<Map<String, String>> manejarDependenciaCliente(DependenciaClienteException ex) {
+        log.warn("Error 4xx de un servicio dependiente: {} - Status: {}", ex.getMessage(), ex.getStatusCode());
+        // Forzamos a un 400 Bad Request o el código original. Aquí devolvemos el código original de la dependencia o 400.
+        // Dado que el cliente nos envió un Request válido para nosotros, pero inválido para la dependencia, devolvemos 400
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", ex.getMessage()));
+    }
+
     @ExceptionHandler(PedidoNoEncontradoException.class)
     public ResponseEntity<Map<String, String>> manejarPedidoNoEncontrado(PedidoNoEncontradoException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", ex.getMessage()));

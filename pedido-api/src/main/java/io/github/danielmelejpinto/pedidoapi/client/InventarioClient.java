@@ -2,6 +2,7 @@ package io.github.danielmelejpinto.pedidoapi.client;
 
 import io.github.danielmelejpinto.pedidoapi.client.dto.ReservaRequest;
 import io.github.danielmelejpinto.pedidoapi.config.ApiProperties;
+import io.github.danielmelejpinto.pedidoapi.exception.DependenciaClienteException;
 import io.github.danielmelejpinto.pedidoapi.exception.ServicioDependienteException;
 import io.github.danielmelejpinto.pedidoapi.exception.StockInsuficienteException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -39,7 +40,7 @@ public class InventarioClient {
                         } catch (IOException ignored) {}
                         throw new StockInsuficienteException("Stock insuficiente para el producto " + productoId);
                     }
-                    throw new ServicioDependienteException("Error de cliente en inventario (reservar): " + response.getStatusCode());
+                    throw new DependenciaClienteException("Error de cliente en inventario (reservar): " + response.getStatusCode(), response.getStatusCode());
                 })
                 .onStatus(status -> status.is5xxServerError(), (request, response) -> {
                     throw new ServicioDependienteException("Error del servidor en inventario (reservar)");
@@ -53,7 +54,7 @@ public class InventarioClient {
                 .body(new ReservaRequest(cantidad))
                 .retrieve()
                 .onStatus(status -> status.is4xxClientError(), (request, response) -> {
-                    throw new ServicioDependienteException("Error de cliente en inventario (liberar): " + response.getStatusCode());
+                    throw new DependenciaClienteException("Error de cliente en inventario (liberar): " + response.getStatusCode(), response.getStatusCode());
                 })
                 .onStatus(status -> status.is5xxServerError(), (request, response) -> {
                     throw new ServicioDependienteException("Error del servidor en inventario (liberar)");
