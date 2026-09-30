@@ -9,8 +9,8 @@ import org.springframework.web.client.RestClient;
 public class ProductoClient {
     private final RestClient restClient;
 
-    public ProductoClient(RestClient.Builder builder, @Value("${api.producto.url}") String url) {
-        this.restClient = builder.baseUrl(url).build();
+    public ProductoClient(@Value("${api.producto.url}") String url) {
+        this.restClient = RestClient.builder().baseUrl(url).build();
     }
 
     public ProductoDTO obtenerProducto(Long id) {

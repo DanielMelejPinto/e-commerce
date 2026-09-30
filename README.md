@@ -569,7 +569,7 @@ El código permite practicar integración entre servicios, pero todavía requier
 | Errores de pedidos | Sin manejador global: errores de otras APIs no se traducen a códigos claros | `@RestControllerAdvice` que mapee stock insuficiente, producto inexistente y servicios caídos |
 | Persistencia | **¡Resuelto!** Todos los servicios utilizan PostgreSQL mediante Docker Compose | Base persistente para todos y un entorno reproducible (Compose completo) |
 | Stock y catálogo | Inventario no comprueba que el producto exista ni su estado | Definir reglas entre ambos dominios |
-| Esquema | Hibernate `ddl-auto=update`, sin migraciones versionadas | Flyway o Liquibase |
+| Esquema | **¡Resuelto!** Todos los servicios utilizan Flyway para migraciones versionadas con validación | Migraciones con Flyway |
 | Automatización | CI ejecuta los módulos Java; sin frontend ni despliegue | Agregar build/lint del frontend y despliegue |
 
 La inicialización idempotente facilita reintentar entregas, pero el Outbox actual no garantiza procesamiento exactamente una vez. Las mejoras de esta sección son propuestas, no funcionalidades implementadas.

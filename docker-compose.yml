@@ -5,8 +5,6 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-ecommerce_user}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ecommerce_pass}
       POSTGRES_DB: postgres
-    ports:
-      - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
@@ -18,8 +16,6 @@ services:
 
   producto-api:
     build: ./producto-api
-    ports:
-      - "8080:8080"
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/producto_db
@@ -31,8 +27,6 @@ services:
 
   inventario-api:
     build: ./inventario-api
-    ports:
-      - "8081:8081"
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/inventario_db
@@ -44,8 +38,6 @@ services:
 
   usuario-api:
     build: ./usuario-api
-    ports:
-      - "8082:8082"
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/usuario_db
@@ -58,8 +50,6 @@ services:
 
   pedido-api:
     build: ./pedido-api
-    ports:
-      - "8083:8083"
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/pedido_db
@@ -75,8 +65,6 @@ services:
 
   frontend-app:
     build: ./frontend-app
-    ports:
-      - "5173:80"
     depends_on:
       producto-api:
         condition: service_healthy

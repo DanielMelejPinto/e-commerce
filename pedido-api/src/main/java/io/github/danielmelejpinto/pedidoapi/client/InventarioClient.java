@@ -9,8 +9,8 @@ import org.springframework.web.client.RestClient;
 public class InventarioClient {
     private final RestClient restClient;
 
-    public InventarioClient(RestClient.Builder builder, @Value("${api.inventario.url}") String url) {
-        this.restClient = builder.baseUrl(url).build();
+    public InventarioClient(@Value("${api.inventario.url}") String url) {
+        this.restClient = RestClient.builder().baseUrl(url).build();
     }
 
     public void reservarStock(Long productoId, Integer cantidad) {
