@@ -1,30 +1,19 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { productoService } from '../../services/productoService';
 import type { Producto } from '../../types';
-import { useCart } from '../../context/CartContext';
+import { useCartStore } from '../../store/useCartStore';
 import styles from './Home.module.css';
 
 const Home = () => {
-  const [products, setProducts] = useState<Producto[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: products = [], isLoading: loading } = useQuery({
+    queryKey: ['productos'],
+    queryFn: productoService.obtenerTodos
+  });
+
   const [searchTerm, setSearchTerm] = useState('');
   const [addedItemIds, setAddedItemIds] = useState<Set<number>>(new Set());
-  const { addToCart } = useCart();
-
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        const data = await productoService.obtenerTodos();
-        setProducts(data);
-      } catch (error) {
-        console.error('Error fetching products', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProducts();
-  }, []);
+  const addToCart = useCartStore((state) => state.addToCart);
 
   const handleAddToCart = (product: Producto) => {
     addToCart({

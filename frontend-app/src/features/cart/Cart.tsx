@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useCart } from '../../context/CartContext';
+import { useCartStore } from '../../store/useCartStore';
 import { useAuth } from '../../context/AuthContext';
 import { pedidoService } from '../../services/pedidoService';
 import { Trash2, CheckCircle } from 'lucide-react';
 import styles from './Cart.module.css';
 
 const Cart = () => {
-  const { items, updateQuantity, removeFromCart, total, clearCart } = useCart();
+  const { items, updateQuantity, removeFromCart, clearCart, getTotal } = useCartStore();
+  const total = getTotal();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);

@@ -7,33 +7,30 @@ import Profile from './features/auth/Profile';
 import Cart from './features/cart/Cart';
 import AdminProducts from './features/admin/AdminProducts';
 import { AuthProvider } from './context/AuthContext';
-import { CartProvider } from './context/CartContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
 
 const App = () => {
   return (
     <AuthProvider>
-      <CartProvider>
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<MainLayout />}>
-              <Route index element={<Home />} />
-              <Route path="login" element={<Login />} />
-              <Route path="register" element={<Register />} />
-              <Route path="cart" element={<Cart />} />
-              
-              <Route element={<ProtectedRoute />}>
-                <Route path="profile" element={<Profile />} />
-              </Route>
-              
-              <Route element={<AdminRoute />}>
-                <Route path="admin" element={<AdminProducts />} />
-              </Route>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<MainLayout />}>
+            <Route index element={<Home />} />
+            <Route path="login" element={<Login />} />
+            <Route path="register" element={<Register />} />
+            <Route path="cart" element={<Cart />} />
+            
+            <Route element={<ProtectedRoute />}>
+              <Route path="profile" element={<Profile />} />
             </Route>
-          </Routes>
-        </BrowserRouter>
-      </CartProvider>
+            
+            <Route element={<AdminRoute />}>
+              <Route path="admin" element={<AdminProducts />} />
+            </Route>
+          </Route>
+        </Routes>
+      </BrowserRouter>
     </AuthProvider>
   );
 };

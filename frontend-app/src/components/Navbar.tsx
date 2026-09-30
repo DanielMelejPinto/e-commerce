@@ -1,12 +1,12 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { ShoppingCart, User, LogOut, LogIn } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { useCart } from '../context/CartContext';
+import { useCartStore } from '../store/useCartStore';
 import styles from './Navbar.module.css';
 
 const Navbar = () => {
   const { user, logout } = useAuth();
-  const { items } = useCart();
+  const items = useCartStore((state) => state.items);
   const navigate = useNavigate();
 
   const handleLogout = () => {
