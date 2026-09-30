@@ -26,10 +26,11 @@ public class PedidoController {
     @PostMapping
     public ResponseEntity<PedidoResponse> crearPedido(
             @AuthenticationPrincipal Long usuarioId,
+            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
             @Valid @RequestBody PedidoRequest request) {
         
         // Le pasamos el usuarioId seguro (que vino por header) al servicio
-        Pedido pedido = pedidoService.crearPedido(usuarioId, request);
+        Pedido pedido = pedidoService.crearPedido(usuarioId, request, idempotencyKey);
         return new ResponseEntity<>(PedidoResponse.fromEntity(pedido), HttpStatus.CREATED);
     }
     @GetMapping("/mis-pedidos") // Cambiamos la ruta para que sea relativa al usuario que hace la petición

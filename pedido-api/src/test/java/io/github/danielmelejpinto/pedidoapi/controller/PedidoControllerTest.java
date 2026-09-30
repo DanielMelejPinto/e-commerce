@@ -48,10 +48,10 @@ class PedidoControllerTest {
         pedidoMock.setFechaCreacion(LocalDateTime.now());
 
         // El mock ahora espera el usuarioId suelto
-        when(pedidoService.crearPedido(eq(usuarioId), any(PedidoRequest.class))).thenReturn(pedidoMock);
+        when(pedidoService.crearPedido(eq(usuarioId), any(PedidoRequest.class), any())).thenReturn(pedidoMock);
 
         // Act
-        ResponseEntity<PedidoResponse> response = pedidoController.crearPedido(usuarioId, request);
+        ResponseEntity<PedidoResponse> response = pedidoController.crearPedido(usuarioId, "test-key", request);
 
         // Assert
         assertEquals(HttpStatus.CREATED, response.getStatusCode());

@@ -33,6 +33,9 @@ class PedidoServiceTest {
     @Mock
     private InventarioClient inventarioClient;
 
+    @Mock
+    private io.github.danielmelejpinto.pedidoapi.repository.ClaveIdempotenciaRepository claveIdempotenciaRepository;
+
     @InjectMocks
     private PedidoService pedidoService;
 
@@ -60,7 +63,7 @@ class PedidoServiceTest {
         });
 
         // Act (Se le pasa el usuarioId como primer parámetro)
-        Pedido pedidoCreado = pedidoService.crearPedido(usuarioId, request);
+        Pedido pedidoCreado = pedidoService.crearPedido(usuarioId, request, null);
 
         // Assert
         assertNotNull(pedidoCreado);
@@ -72,6 +75,34 @@ class PedidoServiceTest {
         verify(productoClient, times(1)).obtenerProducto(productoId);
         verify(inventarioClient, times(1)).reservarStock(productoId, cantidad);
         verify(pedidoRepository, times(1)).save(any(Pedido.class));
+    }
+
+    @Test
+    void crearPedido_idempotenciaYaExiste_retornaPedidoExistente() {
+        // Arrange
+        String idempotencyKey = "test-uuid";
+        Long usuarioId = 1L;
+        Long pedidoExistenteId = 55L;
+        PedidoRequest request = new PedidoRequest(List.of(new PedidoItemRequest(10L, 1)));
+        
+        io.github.danielmelejpinto.pedidoapi.model.ClaveIdempotencia claveMock = 
+            new io.github.danielmelejpinto.pedidoapi.model.ClaveIdempotencia(idempotencyKey, pedidoExistenteId);
+            
+        when(claveIdempotenciaRepository.findById(idempotencyKey)).thenReturn(java.util.Optional.of(claveMock));
+        
+        Pedido pedidoExistente = new Pedido();
+        pedidoExistente.setId(pedidoExistenteId);
+        pedidoExistente.setEstado(EstadoPedido.CONFIRMADO);
+        when(pedidoRepository.findById(pedidoExistenteId)).thenReturn(java.util.Optional.of(pedidoExistente));
+        
+        // Act
+        Pedido pedidoRecuperado = pedidoService.crearPedido(usuarioId, request, idempotencyKey);
+        
+        // Assert
+        assertEquals(pedidoExistenteId, pedidoRecuperado.getId());
+        verify(productoClient, never()).obtenerProducto(any());
+        verify(inventarioClient, never()).reservarStock(any(), any());
+        verify(pedidoRepository, never()).save(any());
     }
 
     @Test

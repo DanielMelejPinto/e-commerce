@@ -566,7 +566,7 @@ El código permite practicar integración entre servicios, pero todavía requier
 | Clasificación HTTP | Todos los `4xx` de inventario se consideran permanentes | Distinguir errores de contrato de respuestas recuperables como `429` |
 | Compensación de pedidos | **¡Resuelto!** Usa `slf4j` logger en vez de `System.err` | Cola de reintentos o *dead letter* |
 | Ciclo de vida del pedido | **¡Resuelto!** Ya hay un endpoint para cancelar pedidos y se compensa el stock en inventario-api | |
-| Idempotencia en pedidos | Reintentar `POST /api/pedidos` tras un timeout puede reservar dos veces | Usar clave de idempotencia (Idempotency-Key) |
+| Idempotencia en pedidos | **¡Resuelto!** Se procesa la cabecera `Idempotency-Key` y se evita la duplicación de reservas de stock | Usar clave de idempotencia (Idempotency-Key) |
 | Errores de pedidos | **¡Resuelto!** Se agregó un `@RestControllerAdvice` global que traduce los errores (404, 409, 503) | Manejo de excepciones unificado |
 | Persistencia | **¡Resuelto!** Todos los servicios utilizan PostgreSQL mediante Docker Compose | Base persistente para todos y un entorno reproducible (Compose completo) |
 | Stock y catálogo | Inventario no comprueba que el producto exista ni su estado | Definir reglas entre ambos dominios |

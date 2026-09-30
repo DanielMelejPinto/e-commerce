@@ -23,16 +23,28 @@ public class PedidoService {
     private final PedidoRepository pedidoRepository;
     private final ProductoClient productoClient;
     private final InventarioClient inventarioClient;
+    private final io.github.danielmelejpinto.pedidoapi.repository.ClaveIdempotenciaRepository claveIdempotenciaRepository;
 
     public PedidoService(PedidoRepository pedidoRepository, ProductoClient productoClient,
-            InventarioClient inventarioClient) {
+            InventarioClient inventarioClient, io.github.danielmelejpinto.pedidoapi.repository.ClaveIdempotenciaRepository claveIdempotenciaRepository) {
         this.pedidoRepository = pedidoRepository;
         this.productoClient = productoClient;
         this.inventarioClient = inventarioClient;
+        this.claveIdempotenciaRepository = claveIdempotenciaRepository;
     }
 
     @Transactional
-    public Pedido crearPedido(Long usuarioId, PedidoRequest request) {
+    public Pedido crearPedido(Long usuarioId, PedidoRequest request, String idempotencyKey) {
+        if (idempotencyKey != null && !idempotencyKey.isBlank()) {
+            java.util.Optional<io.github.danielmelejpinto.pedidoapi.model.ClaveIdempotencia> existente = 
+                claveIdempotenciaRepository.findById(idempotencyKey);
+            if (existente.isPresent()) {
+                log.info("Pedido idempotente recuperado para clave {}", idempotencyKey);
+                return pedidoRepository.findById(existente.get().getPedidoId())
+                        .orElseThrow(() -> new IllegalStateException("Pedido referenciado por idempotencia no existe"));
+            }
+        }
+
         Pedido pedido = new Pedido();
         pedido.setUsuarioId(usuarioId); 
         BigDecimal total = BigDecimal.ZERO;
@@ -77,7 +89,14 @@ public class PedidoService {
 
         pedido.setTotal(total);
         pedido.setEstado(EstadoPedido.CONFIRMADO);
-        return pedidoRepository.save(pedido);
+        Pedido pedidoGuardado = pedidoRepository.save(pedido);
+
+        if (idempotencyKey != null && !idempotencyKey.isBlank()) {
+            claveIdempotenciaRepository.save(
+                new io.github.danielmelejpinto.pedidoapi.model.ClaveIdempotencia(idempotencyKey, pedidoGuardado.getId()));
+        }
+
+        return pedidoGuardado;
     }
 
     public List<Pedido> obtenerPedidosPorUsuario(Long usuarioId) {
