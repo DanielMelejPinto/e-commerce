@@ -1,6 +1,6 @@
-package io.github.danielmelejpinto.pedido.client;
+package io.github.danielmelejpinto.pedidoapi.client;
 
-import io.github.danielmelejpinto.pedido.client.dto.ReservaRequest;
+import io.github.danielmelejpinto.pedidoapi.client.dto.ReservaRequest;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;

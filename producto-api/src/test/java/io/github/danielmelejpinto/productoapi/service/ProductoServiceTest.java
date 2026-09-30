@@ -76,7 +76,7 @@ class ProductoServiceTest {
     }
 
     private ProductoRequest crearRequest(String nombre, String precio) {
-        return new ProductoRequest(nombre, new BigDecimal(precio));
+        return new ProductoRequest(nombre, new BigDecimal(precio), "Descripción de prueba", "https://ejemplo.com/imagen.png");
     }
 
     // =============================================

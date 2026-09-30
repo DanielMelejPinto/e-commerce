@@ -1,13 +1,13 @@
-package io.github.danielmelejpinto.pedido.service;
+package io.github.danielmelejpinto.pedidoapi.service;
 
-import io.github.danielmelejpinto.pedido.client.InventarioClient;
-import io.github.danielmelejpinto.pedido.client.ProductoClient;
-import io.github.danielmelejpinto.pedido.client.dto.ProductoDTO;
-import io.github.danielmelejpinto.pedido.dto.PedidoItemRequest;
-import io.github.danielmelejpinto.pedido.dto.PedidoRequest;
-import io.github.danielmelejpinto.pedido.model.EstadoPedido;
-import io.github.danielmelejpinto.pedido.model.Pedido;
-import io.github.danielmelejpinto.pedido.repository.PedidoRepository;
+import io.github.danielmelejpinto.pedidoapi.client.InventarioClient;
+import io.github.danielmelejpinto.pedidoapi.client.ProductoClient;
+import io.github.danielmelejpinto.pedidoapi.client.dto.ProductoDTO;
+import io.github.danielmelejpinto.pedidoapi.dto.PedidoItemRequest;
+import io.github.danielmelejpinto.pedidoapi.dto.PedidoRequest;
+import io.github.danielmelejpinto.pedidoapi.model.EstadoPedido;
+import io.github.danielmelejpinto.pedidoapi.model.Pedido;
+import io.github.danielmelejpinto.pedidoapi.repository.PedidoRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;

@@ -1,6 +1,6 @@
-package io.github.danielmelejpinto.pedido.repository;
+package io.github.danielmelejpinto.pedidoapi.repository;
 
-import io.github.danielmelejpinto.pedido.model.Pedido;
+import io.github.danielmelejpinto.pedidoapi.model.Pedido;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;

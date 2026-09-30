@@ -1,13 +1,14 @@
-package io.github.danielmelejpinto.pedido.controller;
+package io.github.danielmelejpinto.pedidoapi.controller;
 
-import io.github.danielmelejpinto.pedido.dto.PedidoRequest;
-import io.github.danielmelejpinto.pedido.dto.PedidoResponse;
-import io.github.danielmelejpinto.pedido.model.Pedido;
-import io.github.danielmelejpinto.pedido.service.PedidoService;
+import io.github.danielmelejpinto.pedidoapi.dto.PedidoRequest;
+import io.github.danielmelejpinto.pedidoapi.dto.PedidoResponse;
+import io.github.danielmelejpinto.pedidoapi.model.Pedido;
+import io.github.danielmelejpinto.pedidoapi.service.PedidoService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -24,7 +25,7 @@ public class PedidoController {
 
     @PostMapping
     public ResponseEntity<PedidoResponse> crearPedido(
-            @RequestHeader("X-Usuario-Id") Long usuarioId,
+            @AuthenticationPrincipal Long usuarioId,
             @Valid @RequestBody PedidoRequest request) {
         
         // Le pasamos el usuarioId seguro (que vino por header) al servicio
@@ -33,7 +34,7 @@ public class PedidoController {
     }
     @GetMapping("/mis-pedidos") // Cambiamos la ruta para que sea relativa al usuario que hace la petición
     public ResponseEntity<List<PedidoResponse>> obtenerMisPedidos(
-            @RequestHeader("X-Usuario-Id") Long usuarioId) {
+            @AuthenticationPrincipal Long usuarioId) {
         
         List<Pedido> pedidos = pedidoService.obtenerPedidosPorUsuario(usuarioId);
         List<PedidoResponse> response = pedidos.stream()

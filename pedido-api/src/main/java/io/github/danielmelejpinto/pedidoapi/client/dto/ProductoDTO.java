@@ -1,4 +1,4 @@
-package io.github.danielmelejpinto.pedido.client.dto;
+package io.github.danielmelejpinto.pedidoapi.client.dto;
 
 import java.math.BigDecimal;
 

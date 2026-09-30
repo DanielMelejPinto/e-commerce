@@ -42,6 +42,8 @@ public class ProductoService {
         Producto producto = new Producto();
         producto.setNombre(request.nombre());
         producto.setPrecio(request.precio());
+        producto.setDescripcion(request.descripcion());
+        producto.setImagenUrl(request.imagenUrl());
         producto.setEstado(EstadoProducto.PENDIENTE);
 
         Producto productoGuardado = repository.save(producto);
@@ -75,6 +77,8 @@ public class ProductoService {
         Producto producto = buscarEntidadPorId(id);
         producto.setNombre(request.nombre());
         producto.setPrecio(request.precio());
+        producto.setDescripcion(request.descripcion());
+        producto.setImagenUrl(request.imagenUrl());
         return mapearAResponse(producto);
     }
 
@@ -106,6 +110,8 @@ public class ProductoService {
                 producto.getId(),
                 producto.getNombre(),
                 producto.getPrecio(),
+                producto.getDescripcion(),
+                producto.getImagenUrl(),
                 producto.getFechaCreacion(),
                 producto.getEstado());
     }

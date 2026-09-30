@@ -1,4 +1,4 @@
-package io.github.danielmelejpinto.pedido.model;
+package io.github.danielmelejpinto.pedidoapi.model;
 
 import jakarta.persistence.*;
 import java.math.BigDecimal;

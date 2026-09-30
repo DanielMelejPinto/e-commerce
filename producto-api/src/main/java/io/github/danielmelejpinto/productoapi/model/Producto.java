@@ -29,6 +29,12 @@ public class Producto {
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal precio;
 
+    @Column(length = 1000)
+    private String descripcion;
+
+    @Column(length = 2000)
+    private String imagenUrl;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime fechaCreacion;
 
@@ -74,6 +80,23 @@ public class Producto {
 
     public void setEstado(EstadoProducto estado) {
         this.estado = estado;
+    }
+
+
+    public String getDescripcion() {
+        return descripcion;
+    }
+
+    public void setDescripcion(String descripcion) {
+        this.descripcion = descripcion;
+    }
+
+    public String getImagenUrl() {
+        return imagenUrl;
+    }
+
+    public void setImagenUrl(String imagenUrl) {
+        this.imagenUrl = imagenUrl;
     }
 
     @PrePersist

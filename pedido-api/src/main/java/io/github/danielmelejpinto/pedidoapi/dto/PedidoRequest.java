@@ -1,4 +1,4 @@
-package io.github.danielmelejpinto.pedido.dto;
+package io.github.danielmelejpinto.pedidoapi.dto;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;

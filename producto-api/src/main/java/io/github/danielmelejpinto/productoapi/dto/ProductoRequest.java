@@ -20,5 +20,10 @@ public record ProductoRequest(
         @NotNull(message = "El precio es obligatorio")
         @Positive(message = "El precio debe ser mayor a cero")
         @Digits(integer = 10, fraction = 2, message = "El precio admite hasta 10 enteros y 2 decimales")
-        BigDecimal precio) {
+        BigDecimal precio,
+        @Schema(description = "Descripción detallada del producto", example = "Teclado mecánico RGB")
+        String descripcion,
+
+        @Schema(description = "URL de la imagen del producto", example = "https://ejemplo.com/imagen.jpg")
+        String imagenUrl) {
 }

@@ -78,8 +78,10 @@ public class UsuarioService {
                 new UsernamePasswordAuthenticationToken(emailLimpio, request.password())
         );
 
-        // Si llega a esta línea, es porque la contraseña era correcta
-        String token = jwtService.generarToken(emailLimpio);
+        Usuario usuario = repository.findByEmail(emailLimpio)
+                .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado"));
+
+        String token = jwtService.generarToken(emailLimpio, usuario.getId());
         return new TokenResponse(token);
     }
 

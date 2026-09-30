@@ -1,4 +1,4 @@
-package io.github.danielmelejpinto.pedido;
+package io.github.danielmelejpinto.pedidoapi;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

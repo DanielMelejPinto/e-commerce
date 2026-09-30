@@ -66,7 +66,7 @@ class ProductoControllerTest {
 
     // Arma el JSON de un producto para no repetir comillas escapadas
     private String cuerpo(String nombre, String precio) {
-        return "{\"nombre\": \"" + nombre + "\", \"precio\": " + precio + "}";
+        return "{\"nombre\": \"" + nombre + "\", \"precio\": " + precio + ", \"descripcion\": \"Descripción de prueba\", \"imagenUrl\": \"https://ejemplo.com/imagen.png\"}";
     }
 
     // Crea un producto vía API y devuelve la respuesta completa (para leer id y

@@ -1,6 +1,6 @@
-package io.github.danielmelejpinto.pedido.dto;
+package io.github.danielmelejpinto.pedidoapi.dto;
 
-import io.github.danielmelejpinto.pedido.model.PedidoItem;
+import io.github.danielmelejpinto.pedidoapi.model.PedidoItem;
 import java.math.BigDecimal;
 
 public record PedidoItemResponse(

@@ -1,6 +1,6 @@
-package io.github.danielmelejpinto.pedido.dto;
+package io.github.danielmelejpinto.pedidoapi.dto;
 
-import io.github.danielmelejpinto.pedido.model.Pedido;
+import io.github.danielmelejpinto.pedidoapi.model.Pedido;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;

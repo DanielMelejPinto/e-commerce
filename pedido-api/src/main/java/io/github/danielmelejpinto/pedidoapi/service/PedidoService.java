@@ -1,13 +1,13 @@
-package io.github.danielmelejpinto.pedido.service;
+package io.github.danielmelejpinto.pedidoapi.service;
 
-import io.github.danielmelejpinto.pedido.client.InventarioClient;
-import io.github.danielmelejpinto.pedido.client.ProductoClient;
-import io.github.danielmelejpinto.pedido.client.dto.ProductoDTO;
-import io.github.danielmelejpinto.pedido.dto.PedidoRequest;
-import io.github.danielmelejpinto.pedido.model.EstadoPedido;
-import io.github.danielmelejpinto.pedido.model.Pedido;
-import io.github.danielmelejpinto.pedido.model.PedidoItem;
-import io.github.danielmelejpinto.pedido.repository.PedidoRepository;
+import io.github.danielmelejpinto.pedidoapi.client.InventarioClient;
+import io.github.danielmelejpinto.pedidoapi.client.ProductoClient;
+import io.github.danielmelejpinto.pedidoapi.client.dto.ProductoDTO;
+import io.github.danielmelejpinto.pedidoapi.dto.PedidoRequest;
+import io.github.danielmelejpinto.pedidoapi.model.EstadoPedido;
+import io.github.danielmelejpinto.pedidoapi.model.Pedido;
+import io.github.danielmelejpinto.pedidoapi.model.PedidoItem;
+import io.github.danielmelejpinto.pedidoapi.repository.PedidoRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
