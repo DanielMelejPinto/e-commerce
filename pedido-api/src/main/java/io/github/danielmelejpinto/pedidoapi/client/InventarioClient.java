@@ -12,6 +12,8 @@ import org.springframework.web.client.RestClient;
 
 import java.io.IOException;
 
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+
 @Component
 public class InventarioClient {
     private final RestClient restClient;
@@ -24,6 +26,7 @@ public class InventarioClient {
                 .build();
     }
 
+    @CircuitBreaker(name = "inventario", fallbackMethod = "fallbackReservarStock")
     public void reservarStock(Long productoId, Integer cantidad) {
         restClient.put()
                 .uri("/producto/{productoId}/reservar", productoId)
@@ -48,6 +51,7 @@ public class InventarioClient {
                 .toBodilessEntity();
     }
 
+    @CircuitBreaker(name = "inventario", fallbackMethod = "fallbackLiberarStock")
     public void liberarStock(Long productoId, Integer cantidad) {
         restClient.put()
                 .uri("/producto/{productoId}/liberar", productoId)
@@ -60,5 +64,16 @@ public class InventarioClient {
                     throw new ServicioDependienteException("Error del servidor en inventario (liberar)");
                 })
                 .toBodilessEntity();
+    }
+
+    public void fallbackReservarStock(Long productoId, Integer cantidad, Throwable t) {
+        if (t instanceof StockInsuficienteException) {
+            throw (StockInsuficienteException) t; // No hacer fallback si es error de negocio
+        }
+        throw new ServicioDependienteException("El servicio de inventario está inactivo. Fallback activado (Circuit Breaker).");
+    }
+
+    public void fallbackLiberarStock(Long productoId, Integer cantidad, Throwable t) {
+        throw new ServicioDependienteException("El servicio de inventario está inactivo. Fallback activado (Circuit Breaker).");
     }
 }
