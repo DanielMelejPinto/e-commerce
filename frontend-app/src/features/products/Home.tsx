@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { productoService } from '../../services/productoService';
 import type { Producto } from '../../types';
@@ -6,12 +6,24 @@ import { useCartStore } from '../../store/useCartStore';
 import styles from './Home.module.css';
 
 const Home = () => {
-  const { data: products = [], isLoading: loading } = useQuery({
-    queryKey: ['productos'],
-    queryFn: productoService.obtenerTodos
+  const [page, setPage] = useState(0);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+
+  // Debounce the search input to avoid hitting the backend on every keystroke
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+      setPage(0); // Reset to first page on new search
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [searchTerm]);
+
+  const { data, isLoading: loading } = useQuery({
+    queryKey: ['productos', page, debouncedSearch],
+    queryFn: () => productoService.obtenerTodos(page, 10, debouncedSearch)
   });
 
-  const [searchTerm, setSearchTerm] = useState('');
   const [addedItemIds, setAddedItemIds] = useState<Set<number>>(new Set());
   const addToCart = useCartStore((state) => state.addToCart);
 
@@ -33,12 +45,8 @@ const Home = () => {
     }, 2000);
   };
 
-  const filteredProducts = useMemo(() => {
-    return products.filter(p => 
-      p.nombre.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      p.descripcion.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [products, searchTerm]);
+  const products = data?.content || [];
+  const totalPages = data?.page?.totalPages || 1;
 
   return (
     <main className={styles.container}>
@@ -46,7 +54,7 @@ const Home = () => {
         <h1>Catálogo de Productos</h1>
         <input 
           type="text" 
-          placeholder="Buscar productos..." 
+          placeholder="Buscar productos en el servidor..." 
           aria-label="Buscar productos en el catálogo"
           className={styles.searchInput}
           value={searchTerm}
@@ -66,8 +74,8 @@ const Home = () => {
               <div className={`${styles.skeleton} ${styles.skeletonButton}`} />
             </div>
           ))
-        ) : filteredProducts.length > 0 ? (
-          filteredProducts.map((product) => (
+        ) : products.length > 0 ? (
+          products.map((product) => (
             <article key={product.id} className={styles.card}>
               {product.imagenUrl ? (
                 <img src={product.imagenUrl} alt={product.nombre} className={styles.image} />
@@ -88,10 +96,30 @@ const Home = () => {
           ))
         ) : (
           <div className={styles.emptyState} role="status">
-            No se encontraron productos para "{searchTerm}"
+            No se encontraron productos para "{debouncedSearch}"
           </div>
         )}
       </div>
+
+      {totalPages > 1 && (
+        <div className={styles.pagination}>
+          <button 
+            disabled={page === 0} 
+            onClick={() => setPage(p => p - 1)}
+            className={styles.pageButton}
+          >
+            Anterior
+          </button>
+          <span className={styles.pageInfo}>Página {page + 1} de {totalPages}</span>
+          <button 
+            disabled={page === totalPages - 1} 
+            onClick={() => setPage(p => p + 1)}
+            className={styles.pageButton}
+          >
+            Siguiente
+          </button>
+        </div>
+      )}
     </main>
   );
 };

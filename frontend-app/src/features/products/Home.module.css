@@ -168,3 +168,33 @@
 .buttonSuccess:hover {
   background-color: #237032;
 }
+
+/* Pagination */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.pageButton {
+  background-color: #228be6;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 0.5rem 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.pageButton:disabled {
+  background-color: #ced4da;
+  cursor: not-allowed;
+}
+
+.pageInfo {
+  font-weight: bold;
+  color: #495057;
+}

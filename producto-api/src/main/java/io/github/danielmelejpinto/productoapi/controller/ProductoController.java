@@ -53,12 +53,13 @@ public class ProductoController {
 
     // Spring arma el Pageable desde ?page=0&size=10&sort=precio,desc
     @GetMapping
-    @Operation(summary = "Listar productos con paginación y orden", description = "Parámetros: page, size (máx. 50) y sort (id, nombre, precio, fechaCreacion). Ej: ?sort=precio,desc")
+    @Operation(summary = "Listar productos con paginación y orden", description = "Parámetros: page, size (máx. 50), sort y nombre. Ej: ?nombre=Laptop&sort=precio,desc")
     @ApiResponse(responseCode = "200", description = "Página de productos")
     @ApiResponse(responseCode = "400", description = "Campo de orden no permitido")
     public ResponseEntity<PagedModel<ProductoResponse>> listarTodos(
+            @org.springframework.web.bind.annotation.RequestParam(required = false) String nombre,
             @PageableDefault(size = 10, sort = "id") Pageable pageable) {
-        return ResponseEntity.ok(new PagedModel<>(service.obtenerTodos(pageable)));
+        return ResponseEntity.ok(new PagedModel<>(service.obtenerTodos(nombre, pageable)));
     }
 
     @GetMapping("/{id}")

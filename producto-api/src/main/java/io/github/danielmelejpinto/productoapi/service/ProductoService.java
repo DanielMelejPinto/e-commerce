@@ -59,13 +59,20 @@ public class ProductoService {
         return mapearAResponse(productoGuardado);
     }
 
-    public Page<ProductoResponse> obtenerTodos(Pageable pageable) {
+    public Page<ProductoResponse> obtenerTodos(String nombre, Pageable pageable) {
         validarOrdenamiento(pageable.getSort());
         
         Sort sort = pageable.getSort().and(Sort.by(ID_FIELD));
         Pageable pageableConId = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
         
-        return repository.findByEstado(EstadoProducto.ACTIVO, pageableConId).map(this::mapearAResponse);
+        Page<Producto> pagina;
+        if (nombre != null && !nombre.isBlank()) {
+            pagina = repository.findByEstadoAndNombreContainingIgnoreCase(EstadoProducto.ACTIVO, nombre.trim(), pageableConId);
+        } else {
+            pagina = repository.findByEstado(EstadoProducto.ACTIVO, pageableConId);
+        }
+        
+        return pagina.map(this::mapearAResponse);
     }
 
     public ProductoResponse obtenerPorId(Long id) {
