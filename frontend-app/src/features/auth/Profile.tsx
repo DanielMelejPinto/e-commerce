@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import api from '../../api/axios';
+import { obtenerMisPedidos, cancelarPedido } from '../../services/pedidoService';
 import styles from './Profile.module.css';
 
 const Profile = () => {
@@ -11,8 +11,8 @@ const Profile = () => {
   useEffect(() => {
     const fetchPedidos = async () => {
       try {
-        const response = await api.get('/api/pedidos/mis-pedidos');
-        setPedidos(response.data);
+        const data = await obtenerMisPedidos();
+        setPedidos(data);
       } catch (error) {
         console.error('Error fetching pedidos', error);
       } finally {
@@ -22,6 +22,16 @@ const Profile = () => {
 
     fetchPedidos();
   }, []);
+
+  const handleCancelar = async (pedidoId: number) => {
+    if (!window.confirm('¿Estás seguro de que quieres cancelar este pedido?')) return;
+    try {
+      const pedidoCancelado = await cancelarPedido(pedidoId);
+      setPedidos((prev) => prev.map((p) => (p.id === pedidoId ? pedidoCancelado : p)));
+    } catch (error) {
+      alert('Error al cancelar el pedido');
+    }
+  };
 
   return (
     <div className={styles.container}>
@@ -64,6 +74,11 @@ const Profile = () => {
                     ))}
                   </ul>
                 </div>
+                {pedido.estado === 'CONFIRMADO' && (
+                  <button onClick={() => handleCancelar(pedido.id)} className={styles.cancelButton}>
+                    Cancelar Pedido
+                  </button>
+                )}
               </div>
             ))}
           </div>

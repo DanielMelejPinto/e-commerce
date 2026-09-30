@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../../context/CartContext';
 import { useAuth } from '../../context/AuthContext';
-import api from '../../api/axios';
+import { crearPedido } from '../../services/pedidoService';
 import { Trash2 } from 'lucide-react';
 import styles from './Cart.module.css';
 
@@ -32,7 +32,7 @@ const Cart = () => {
         }))
       };
 
-      await api.post('/api/pedidos', payload);
+      await crearPedido(payload);
       clearCart();
       navigate('/profile'); // Redirigir a perfil para ver el pedido
     } catch (err: any) {

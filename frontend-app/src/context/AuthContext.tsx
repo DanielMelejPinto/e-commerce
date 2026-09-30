@@ -39,6 +39,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } else {
       setLoading(false);
     }
+
+    const handleAuthExpired = () => {
+      setUser(null);
+    };
+
+    window.addEventListener('auth-expired', handleAuthExpired);
+    return () => {
+      window.removeEventListener('auth-expired', handleAuthExpired);
+    };
   }, []);
 
   const login = (token: string, userData: User) => {
