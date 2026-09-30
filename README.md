@@ -558,8 +558,8 @@ El código permite practicar integración entre servicios, pero todavía requier
 
 | Área | Situación actual | Mejora propuesta |
 | --- | --- | --- |
-| Acceso a producto e inventario | Sin autenticación ni autorización: cualquiera con acceso a los puertos 8080/8081 puede crear productos o modificar stock | Validar el JWT y exigir rol `ADMIN` en las operaciones de escritura |
-| Rol de administrador | `/admin` solo se protege en el frontend (revisa el rol en el cliente); no hay forma de crear un `ADMIN` por la API | Autorizar por rol en el backend y definir cómo se asigna |
+| Acceso a producto e inventario | **¡Resuelto!** Todos los microservicios validan el JWT de `usuario-api`. La escritura exige rol `ADMIN` y las lecturas son seguras o públicas | Validar el JWT y exigir rol `ADMIN` en las operaciones de escritura |
+| Rol de administrador | **¡Resuelto!** El token JWT incluye el rol y existe un `AdminSeeder` para crear el primer administrador seguro | Autorizar por rol en el backend y definir cómo se asigna |
 | Secreto JWT | Secreto compartido por variable de entorno; `pedido-api` no arranca sin él y la clave por defecto de `usuario-api` es pública | Gestionar el secreto fuera del repositorio; considerar claves asimétricas |
 | Finalización del Outbox | Producto y evento se guardan por separado; el evento no tiene bloqueo ni versión | Hacer atómica la actualización final y coordinar varias instancias |
 | Reintentos del Outbox | Límite de 5 intentos, pero consulta todos los pendientes y sin espera progresiva | Procesar por lotes, espera progresiva y reproceso manual |
