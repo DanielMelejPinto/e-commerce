@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-24.04
     strategy:
       matrix:
-        module: [ producto-api, inventario-api ]
+        module: [ producto-api, inventario-api, usuario-api, pedido-api ]
       fail-fast: false
     
     steps:

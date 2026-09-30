@@ -28,7 +28,11 @@ public class InventarioService {
         return mapearAResponse(buscar(productoId));
     }
 
-    // propagation = NEVER evita que este método corra dentro de una transacción activa. Esto nos permite capturar el DataIntegrityViolationException de Hibernate sin que la transacción superior se marque irremediablemente como rollback-only, logrando así un insert seguro y verdaderamente idempotente ante hilos concurrentes.
+    // propagation = NEVER evita que este método corra dentro de una transacción
+    // activa. Esto nos permite capturar el DataIntegrityViolationException de
+    // Hibernate sin que la transacción superior se marque irremediablemente como
+    // rollback-only, logrando así un insert seguro y verdaderamente idempotente
+    // ante hilos concurrentes.
     @Transactional(propagation = Propagation.NEVER)
     public ResultadoInicializacion inicializarInventario(Long productoId) {
         return repository.findByProductoId(productoId)
@@ -41,7 +45,8 @@ public class InventarioService {
                         // Otro hilo o proceso ganó la carrera y lo creó primero.
                         // Volvemos a buscarlo (ya debería estar)
                         Inventario existente = repository.findByProductoId(productoId)
-                                .orElseThrow(() -> new IllegalStateException("Se esperaba encontrar el inventario tras colisión, pero no está", e));
+                                .orElseThrow(() -> new IllegalStateException(
+                                        "Se esperaba encontrar el inventario tras colisión, pero no está", e));
                         return new ResultadoInicializacion(mapearAResponse(existente), false);
                     }
                 });
@@ -89,10 +94,16 @@ public class InventarioService {
 
     private InventarioResponse mapearAResponse(Inventario inventario) {
         return new InventarioResponse(
-            inventario.getProductoId(),
-            inventario.getCantidadDisponible(),
-            inventario.getCantidadReservada(),
-            inventario.getUltimaActualizacion()
-        );
+                inventario.getProductoId(),
+                inventario.getCantidadDisponible(),
+                inventario.getCantidadReservada(),
+                inventario.getUltimaActualizacion());
+    }
+
+    @Transactional
+    public InventarioResponse liberarStock(Long productoId, int cantidad) {
+        repository.liberarStockAtomico(productoId, cantidad);
+        // Retornamos el estado actualizado
+        return mapearAResponse(buscar(productoId));
     }
 }

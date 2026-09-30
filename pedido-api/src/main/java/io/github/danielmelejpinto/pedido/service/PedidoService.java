@@ -20,38 +20,60 @@ public class PedidoService {
     private final ProductoClient productoClient;
     private final InventarioClient inventarioClient;
 
-    public PedidoService(PedidoRepository pedidoRepository, ProductoClient productoClient, InventarioClient inventarioClient) {
+    public PedidoService(PedidoRepository pedidoRepository, ProductoClient productoClient,
+            InventarioClient inventarioClient) {
         this.pedidoRepository = pedidoRepository;
         this.productoClient = productoClient;
         this.inventarioClient = inventarioClient;
     }
 
     @Transactional
-    public Pedido crearPedido(PedidoRequest request) {
+    public Pedido crearPedido(Long usuarioId, PedidoRequest request) {
         Pedido pedido = new Pedido();
-        pedido.setUsuarioId(request.usuarioId());
-        
+        pedido.setUsuarioId(usuarioId); 
         BigDecimal total = BigDecimal.ZERO;
-        
-        for (var itemReq : request.items()) {
-            // 1. Obtener producto y validar que exista
-            ProductoDTO producto = productoClient.obtenerProducto(itemReq.productoId());
-            
-            // 2. Reservar stock en el inventario
-            inventarioClient.reservarStock(itemReq.productoId(), itemReq.cantidad());
-            
-            // 3. Crear el item del pedido
-            PedidoItem item = new PedidoItem();
-            item.setProductoId(itemReq.productoId());
-            item.setCantidad(itemReq.cantidad());
-            item.setPrecioUnitario(producto.precio());
-            
-            total = total.add(producto.precio().multiply(new BigDecimal(itemReq.cantidad())));
-            pedido.addItem(item);
+
+        // Aquí guardaremos los productos que logramos reservar para liberarlos si algo
+        // falla después
+        java.util.List<PedidoItem> itemsReservados = new java.util.ArrayList<>();
+
+        try {
+            for (var itemReq : request.items()) {
+                ProductoDTO producto = productoClient.obtenerProducto(itemReq.productoId());
+
+                inventarioClient.reservarStock(itemReq.productoId(), itemReq.cantidad());
+
+                PedidoItem item = new PedidoItem();
+                item.setProductoId(itemReq.productoId());
+                item.setCantidad(itemReq.cantidad());
+                item.setPrecioUnitario(producto.precio());
+
+                total = total.add(producto.precio().multiply(new BigDecimal(itemReq.cantidad())));
+                pedido.addItem(item);
+
+                // Anotamos que este item ya fue reservado exitosamente en el servicio externo
+                itemsReservados.add(item);
+            }
+        } catch (Exception e) {
+            // ¡Algo falló! Activamos la transacción compensatoria (Saga)
+            for (PedidoItem itemReservado : itemsReservados) {
+                try {
+                    inventarioClient.liberarStock(itemReservado.getProductoId(), itemReservado.getCantidad());
+                } catch (Exception exCompensacion) {
+                    // En sistemas avanzados, si la compensación falla, se manda a una "Dead Letter
+                    // Queue" (Kafka/RabbitMQ)
+                    // para revisión manual. Por ahora, solo lo logueamos.
+                    System.err.println(
+                            "Error crítico al liberar stock huérfano del producto " + itemReservado.getProductoId());
+                }
+            }
+            // Relanzamos la excepción para que el usuario reciba su HTTP 400/500 original
+            // y para que el @Transactional aborte el guardado del Pedido en la BD local.
+            throw e;
         }
-        
+
         pedido.setTotal(total);
-        pedido.setEstado(EstadoPedido.CONFIRMADO); // Si todo sale bien, lo confirmamos
+        pedido.setEstado(EstadoPedido.CONFIRMADO);
         return pedidoRepository.save(pedido);
     }
 

@@ -20,4 +20,12 @@ public class InventarioClient {
                 .retrieve()
                 .toBodilessEntity();
     }
+
+        public void liberarStock(Long productoId, Integer cantidad) {
+        restClient.put()
+                .uri("/producto/{productoId}/liberar", productoId)
+                .body(new ReservaRequest(cantidad))
+                .retrieve()
+                .toBodilessEntity();
+    }
 }

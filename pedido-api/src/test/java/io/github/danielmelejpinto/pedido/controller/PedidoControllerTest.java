@@ -2,6 +2,7 @@ package io.github.danielmelejpinto.pedido.controller;
 
 import io.github.danielmelejpinto.pedido.dto.PedidoItemRequest;
 import io.github.danielmelejpinto.pedido.dto.PedidoRequest;
+import io.github.danielmelejpinto.pedido.dto.PedidoResponse;
 import io.github.danielmelejpinto.pedido.model.EstadoPedido;
 import io.github.danielmelejpinto.pedido.model.Pedido;
 import io.github.danielmelejpinto.pedido.service.PedidoService;
@@ -14,10 +15,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -33,22 +36,26 @@ class PedidoControllerTest {
     void crearPedido_valido_retorna201() {
         // Arrange
         PedidoItemRequest itemReq = new PedidoItemRequest(1L, 2);
-        PedidoRequest request = new PedidoRequest(10L, List.of(itemReq));
+        // Ya no enviamos el usuarioId en el JSON
+        PedidoRequest request = new PedidoRequest(List.of(itemReq));
+        Long usuarioId = 10L;
 
         Pedido pedidoMock = new Pedido();
         pedidoMock.setId(100L);
-        pedidoMock.setUsuarioId(10L);
+        pedidoMock.setUsuarioId(usuarioId);
         pedidoMock.setEstado(EstadoPedido.CONFIRMADO);
         pedidoMock.setTotal(new BigDecimal("200.00"));
+        pedidoMock.setFechaCreacion(LocalDateTime.now());
 
-        when(pedidoService.crearPedido(any(PedidoRequest.class))).thenReturn(pedidoMock);
+        // El mock ahora espera el usuarioId suelto
+        when(pedidoService.crearPedido(eq(usuarioId), any(PedidoRequest.class))).thenReturn(pedidoMock);
 
         // Act
-        ResponseEntity<Pedido> response = pedidoController.crearPedido(request);
+        ResponseEntity<PedidoResponse> response = pedidoController.crearPedido(usuarioId, request);
 
         // Assert
         assertEquals(HttpStatus.CREATED, response.getStatusCode());
-        assertEquals(100L, response.getBody().getId());
-        assertEquals(EstadoPedido.CONFIRMADO, response.getBody().getEstado());
+        assertEquals(100L, response.getBody().id());
+        assertEquals("CONFIRMADO", response.getBody().estado());
     }
 }

@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import io.github.danielmelejpinto.productoapi.client.InventarioClient;
 import io.github.danielmelejpinto.productoapi.exception.InventarioRechazoException;
@@ -25,14 +26,19 @@ public class OutboxProcessor {
     private final OutboxEventRepository eventRepository;
     private final ProductoRepository productoRepository;
     private final InventarioClient inventarioClient;
+    private final TransactionTemplate transactionTemplate;
 
     @Value("${outbox.max-intentos:5}")
     private int maxIntentos;
 
-    public OutboxProcessor(OutboxEventRepository eventRepository, ProductoRepository productoRepository, InventarioClient inventarioClient) {
+    public OutboxProcessor(OutboxEventRepository eventRepository, 
+                           ProductoRepository productoRepository, 
+                           InventarioClient inventarioClient,
+                           TransactionTemplate transactionTemplate) {
         this.eventRepository = eventRepository;
         this.productoRepository = productoRepository;
         this.inventarioClient = inventarioClient;
+        this.transactionTemplate = transactionTemplate;
     }
 
     @Scheduled(fixedDelay = 5000)
@@ -49,41 +55,52 @@ public class OutboxProcessor {
                 continue;
             }
 
-            // Si el producto ya fue dado de baja, no llamamos a inventario y lo descartamos/marcamos enviado
             if (producto.getEstado() == EstadoProducto.BAJA) {
-                log.info("Evento {} enviado correctamente para producto {}", event.getId(), producto.getId());
                 event.setEstado(EstadoEvento.ENVIADO);
                 eventRepository.save(event);
                 continue;
             }
 
             try {
+                // 1. LLAMADA HTTP (Fuera de cualquier transacción de BD)
                 inventarioClient.inicializarInventario(producto.getId());
                 
+                // 2. ACTUALIZACIÓN ATÓMICA DE BD LOCAL
+                transactionTemplate.executeWithoutResult(status -> {
+                    event.setEstado(EstadoEvento.ENVIADO);
+                    producto.setEstado(EstadoProducto.ACTIVO);
+                    
+                    productoRepository.save(producto);
+                    eventRepository.save(event);
+                });
+                
                 log.info("Evento {} enviado correctamente para producto {}", event.getId(), producto.getId());
-                event.setEstado(EstadoEvento.ENVIADO);
-                producto.setEstado(EstadoProducto.ACTIVO);
                 
-                productoRepository.save(producto);
-                eventRepository.save(event);
             } catch (InventarioRechazoException e) {
-                // 4xx: Error de contrato, permanente
+                // Rechazo permanente por reglas de negocio (ej. 400 Bad Request)
                 log.error("Rechazo permanente para evento {} del producto {}", event.getId(), producto.getId());
-                event.setEstado(EstadoEvento.ERROR);
-                producto.setEstado(EstadoProducto.BAJA);
+                transactionTemplate.executeWithoutResult(status -> {
+                    event.setEstado(EstadoEvento.ERROR);
+                    producto.setEstado(EstadoProducto.BAJA);
+                    productoRepository.save(producto);
+                    eventRepository.save(event);
+                });
                 
-                productoRepository.save(producto);
-                eventRepository.save(event);
             } catch (Exception e) {
-                // 5xx o timeout: Reintentar
+                // Si llegamos aquí, o la llamada HTTP falló, o la transacción de BD falló.
+                // En ambos casos, el evento no se pudo completar.
+                
+                // Forzamos que retorne a PENDIENTE (por si falló en memoria pero no en BD)
+                event.setEstado(EstadoEvento.PENDIENTE);
                 event.setIntentos(event.getIntentos() + 1);
+                
                 if (event.getIntentos() >= maxIntentos) {
-                    log.error("Evento {} alcanzó el máximo de intentos ({}). Producto: {}. Marcando ERROR.", event.getId(), maxIntentos, producto.getId());
+                    log.error("Evento {} superó intentos. Marcando ERROR. Error: {}", event.getId(), e.getMessage());
                     event.setEstado(EstadoEvento.ERROR);
                 } else {
-                    log.warn("Fallo recuperable en evento {} del producto {}. Intentos: {}. Error: {}", event.getId(), producto.getId(), event.getIntentos(), e.getMessage());
+                    log.warn("Fallo temporal en evento {}. Intentos: {}. Error: {}", event.getId(), event.getIntentos(), e.getMessage());
                 }
-                eventRepository.save(event);
+                eventRepository.save(event); // Guardamos la actualización de intentos
             }
         }
     }

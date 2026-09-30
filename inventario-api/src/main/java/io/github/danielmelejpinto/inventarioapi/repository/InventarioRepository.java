@@ -16,4 +16,8 @@ public interface InventarioRepository extends JpaRepository<Inventario, Long> {
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("UPDATE Inventario i SET i.cantidadDisponible = i.cantidadDisponible - :cantidad, i.cantidadReservada = i.cantidadReservada + :cantidad, i.ultimaActualizacion = CURRENT_TIMESTAMP, i.version = i.version + 1 WHERE i.productoId = :productoId AND i.cantidadDisponible >= :cantidad")
     int reservarStockAtomico(@Param("productoId") Long productoId, @Param("cantidad") long cantidad);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("UPDATE Inventario i SET i.cantidadDisponible = i.cantidadDisponible + :cantidad, i.cantidadReservada = i.cantidadReservada - :cantidad, i.ultimaActualizacion = CURRENT_TIMESTAMP, i.version = i.version + 1 WHERE i.productoId = :productoId AND i.cantidadReservada >= :cantidad")
+    int liberarStockAtomico(@Param("productoId") Long productoId, @Param("cantidad") long cantidad);
 }

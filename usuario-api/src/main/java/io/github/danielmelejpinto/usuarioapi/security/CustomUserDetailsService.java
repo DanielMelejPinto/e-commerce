@@ -1,7 +1,9 @@
 package io.github.danielmelejpinto.usuarioapi.security;
 
+import io.github.danielmelejpinto.usuarioapi.model.EstadoUsuario;
 import io.github.danielmelejpinto.usuarioapi.model.Usuario;
 import io.github.danielmelejpinto.usuarioapi.repository.UsuarioRepository;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -28,7 +30,12 @@ public class CustomUserDetailsService implements UserDetailsService {
         Usuario usuarioBaseDatos = repositorioUsuarios.findByEmail(emailLimpio)
                 .orElseThrow(() -> new UsernameNotFoundException("No se halló el usuario con email: " + emailLimpio));
 
-        // Retornamos el User que entiende Spring Security
+        // 1. Validamos que el usuario no esté de baja
+        if (usuarioBaseDatos.getEstado() != EstadoUsuario.ACTIVO) {
+            throw new DisabledException("El usuario está inactivo o dado de baja.");
+        }
+
+        // 2. Retornamos el User que entiende Spring Security
         return new User(
                 usuarioBaseDatos.getEmail(),
                 usuarioBaseDatos.getPasswordHash(),

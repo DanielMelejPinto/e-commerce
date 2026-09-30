@@ -45,7 +45,8 @@ class PedidoServiceTest {
         BigDecimal precio = new BigDecimal("50.00");
 
         PedidoItemRequest itemRequest = new PedidoItemRequest(productoId, cantidad);
-        PedidoRequest request = new PedidoRequest(usuarioId, List.of(itemRequest));
+        // Sin usuarioId en el request
+        PedidoRequest request = new PedidoRequest(List.of(itemRequest));
 
         ProductoDTO productoDTO = new ProductoDTO(productoId, "Producto Test", precio, "ACTIVO");
 
@@ -54,18 +55,18 @@ class PedidoServiceTest {
         
         when(pedidoRepository.save(any(Pedido.class))).thenAnswer(invocation -> {
             Pedido p = invocation.getArgument(0);
-            p.setId(1L); // Simulamos que la BD le asigna un ID
+            p.setId(1L);
             return p;
         });
 
-        // Act
-        Pedido pedidoCreado = pedidoService.crearPedido(request);
+        // Act (Se le pasa el usuarioId como primer parámetro)
+        Pedido pedidoCreado = pedidoService.crearPedido(usuarioId, request);
 
         // Assert
         assertNotNull(pedidoCreado);
         assertEquals(usuarioId, pedidoCreado.getUsuarioId());
         assertEquals(EstadoPedido.CONFIRMADO, pedidoCreado.getEstado());
-        assertEquals(new BigDecimal("100.00"), pedidoCreado.getTotal()); // 50.00 * 2
+        assertEquals(new BigDecimal("100.00"), pedidoCreado.getTotal());
         assertEquals(1, pedidoCreado.getItems().size());
         
         verify(productoClient, times(1)).obtenerProducto(productoId);

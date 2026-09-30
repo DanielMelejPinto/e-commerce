@@ -83,4 +83,11 @@ public class InventarioController {
         service.eliminarInventario(productoId);
         return ResponseEntity.noContent().build();
     }
+
+    @PutMapping("/liberar")
+    @Operation(summary = "Liberar stock reservado (compensación)")
+    public InventarioResponse liberar(@PathVariable Long productoId,
+            @Valid @RequestBody CantidadRequest request) {
+        return service.liberarStock(productoId, request.cantidad());
+    }
 }
