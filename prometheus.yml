@@ -2,22 +2,27 @@ global:
   scrape_interval: 10s
 
 scrape_configs:
+  - job_name: 'gateway-api'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['host.docker.internal:8000']
+
   - job_name: 'producto-api'
     metrics_path: '/actuator/prometheus'
     static_configs:
-      - targets: ['producto-api:8080']
+      - targets: ['host.docker.internal:8080']
 
   - job_name: 'inventario-api'
     metrics_path: '/actuator/prometheus'
     static_configs:
-      - targets: ['inventario-api:8081']
+      - targets: ['host.docker.internal:8081']
 
   - job_name: 'usuario-api'
     metrics_path: '/actuator/prometheus'
     static_configs:
-      - targets: ['usuario-api:8082']
+      - targets: ['host.docker.internal:8082']
 
   - job_name: 'pedido-api'
     metrics_path: '/actuator/prometheus'
     static_configs:
-      - targets: ['pedido-api:8083']
+      - targets: ['host.docker.internal:8083']

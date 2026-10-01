@@ -40,14 +40,18 @@ El frontend (`frontend-app`) está diseñado para operar a escala empresarial:
 
 ## Cómo ejecutar el proyecto en local
 
-### 1. Iniciar Infraestructura (PostgreSQL & Kafka)
-Asegúrate de tener Docker instalado y ejecutándose:
+### 1. Preparar las variables de entorno
+Crea un archivo `.env` en la raíz del proyecto basándote en el `.env.example` proporcionado. Este archivo contendrá el `JWT_SECRET`, credenciales de bases de datos `SPRING_DATASOURCE_*` y del primer administrador (`ADMIN_EMAIL` y `ADMIN_PASSWORD`).
+
+### 2. Iniciar Infraestructura y Bases de Datos
+Puedes iniciar de forma automatizada PostgreSQL, Kafka, Prometheus, y opcionalmente todos los microservicios usando Docker Compose:
 ```bash
 docker-compose up -d
 ```
+> **Nota**: El perfil por defecto (`dev`) en ejecución local utiliza bases de datos en memoria (H2). El perfil `docker` usa PostgreSQL y requiere proveer explícitamente las credenciales de base de datos (se hace vía `.env`).
 
-### 2. Iniciar Backend (Microservicios)
-Puedes ejecutar cada uno en terminales separadas (recuerda setear la variable de entorno del secreto JWT si es necesaria):
+### 3. Iniciar Backend Localmente (Modo Desarrollo)
+Si prefieres correrlos en local fuera de Docker (usa el perfil `dev` que incluye H2 en memoria y `spring.jpa.show-sql=true` o `false`), corre en terminales separadas:
 ```bash
 (cd gateway-api && ./mvnw spring-boot:run)
 (cd usuario-api && ./mvnw spring-boot:run)
@@ -56,7 +60,7 @@ Puedes ejecutar cada uno en terminales separadas (recuerda setear la variable de
 (cd pedido-api && ./mvnw spring-boot:run)
 ```
 
-### 3. Iniciar Frontend
+### 4. Iniciar Frontend
 ```bash
 cd frontend-app
 npm install
@@ -70,7 +74,7 @@ El proyecto cuenta con suites de tests rigurosas (Unitarias e Integración) usan
 
 Comando local para probar cualquier microservicio:
 ```bash
-./mvnw clean test
+./mvnw clean verify
 ```
 
 ---

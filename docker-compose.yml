@@ -18,6 +18,8 @@ services:
 
   prometheus:
     image: prom/prometheus:latest
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
     ports:
@@ -37,6 +39,114 @@ services:
       KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://localhost:9092'
       KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
       CLUSTER_ID: 'MkU3OEVBNTcwNTJENDM2Qk'
+
+
+  gateway-api:
+    build:
+      context: ./gateway-api
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - PRODUCTO_URL=http://producto-api:8080
+      - INVENTARIO_URL=http://inventario-api:8081
+      - USUARIO_URL=http://usuario-api:8082
+      - PEDIDO_URL=http://pedido-api:8083
+      - CORS_ALLOWED_ORIGINS=http://localhost:5173
+    depends_on:
+      producto-api:
+        condition: service_healthy
+      inventario-api:
+        condition: service_healthy
+      usuario-api:
+        condition: service_healthy
+      pedido-api:
+        condition: service_healthy
+
+  usuario-api:
+    build:
+      context: ./usuario-api
+      dockerfile: Dockerfile
+    ports:
+      - "8082:8082"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/usuario_db
+      - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER:-ecommerce_user}
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD:-ecommerce_pass}
+      - JWT_SECRET=${JWT_SECRET}
+      - ADMIN_EMAIL=${ADMIN_EMAIL}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  producto-api:
+    build:
+      context: ./producto-api
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/producto_db
+      - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER:-ecommerce_user}
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD:-ecommerce_pass}
+      - JWT_SECRET=${JWT_SECRET}
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+
+  inventario-api:
+    build:
+      context: ./inventario-api
+      dockerfile: Dockerfile
+    ports:
+      - "8081:8081"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/inventario_db
+      - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER:-ecommerce_user}
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD:-ecommerce_pass}
+      - JWT_SECRET=${JWT_SECRET}
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+
+  pedido-api:
+    build:
+      context: ./pedido-api
+      dockerfile: Dockerfile
+    ports:
+      - "8083:8083"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/pedido_db
+      - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER:-ecommerce_user}
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD:-ecommerce_pass}
+      - JWT_SECRET=${JWT_SECRET}
+      - PRODUCTO_URL=http://producto-api:8080/api/productos
+      - INVENTARIO_URL=http://inventario-api:8081/api/inventarios
+      - USUARIO_URL=http://usuario-api:8082/api/usuarios
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend-app:
+    build:
+      context: ./frontend-app
+      dockerfile: Dockerfile
+    ports:
+      - "5173:80"
+    depends_on:
+      gateway-api:
+        condition: service_healthy
 
 volumes:
   pgdata:
