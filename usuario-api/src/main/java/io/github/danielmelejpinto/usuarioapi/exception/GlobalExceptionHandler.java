@@ -16,7 +16,6 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.InternalAuthenticationServiceException;
-import org.springframework.security.core.AuthenticationException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -52,9 +51,9 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", ex.getMessage()));
     }
 
-    // 401: credenciales incorrectas, o cuenta dada de baja (mismo mensaje: no revela que la cuenta existe)
-    @ExceptionHandler({BadCredentialsException.class, DisabledException.class})
-    public ResponseEntity<Map<String, String>> manejarCredencialesInvalidas(AuthenticationException ex) {
+    // 401: credenciales incorrectas en login
+    @ExceptionHandler(BadCredentialsException.class)
+    public ResponseEntity<Map<String, String>> manejarCredencialesInvalidas(BadCredentialsException ex) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(Map.of("error", "Email o contraseña incorrectos"));
     }
