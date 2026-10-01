@@ -38,20 +38,48 @@ El frontend (`frontend-app`) está diseñado para operar a escala empresarial:
 - **Tipado Estricto (TypeScript)**: Interfaces globales y 0% de uso de `any`.
 - **Capa de Servicios**: Desacoplamiento total entre componentes UI (`.tsx`) e integraciones HTTP (`axios`).
 
+## Puertos
+
+| Servicio | Puerto | Notas |
+|---|---|---|
+| `frontend-app` | 5173 | nginx; proxea `/api/` al gateway |
+| `gateway-api` | 8000 | Punto de entrada a la API |
+| `producto-api` | 8080 | |
+| `inventario-api` | 8081 | |
+| `usuario-api` | 8082 | |
+| `pedido-api` | 8083 | |
+| PostgreSQL | 5432 | Bases `producto_db`, `inventario_db`, `usuario_db`, `pedido_db` |
+| Kafka | 9092 | Desde el host. Entre contenedores: `kafka:29092` |
+| Prometheus | 9090 | Targets en http://localhost:9090/targets |
+
+## Perfiles
+
+- **`dev` (por defecto)**: H2 en memoria, sin PostgreSQL. Para `producto-api` e `inventario-api` hace falta Kafka en `localhost:9092` (`docker compose up -d kafka`).
+- **`docker`**: PostgreSQL, Flyway, `ddl-auto=validate`, Swagger y consola H2 desactivados. No tiene valor por defecto para `JWT_SECRET`.
+
 ## Cómo ejecutar el proyecto en local
 
-### 1. Preparar las variables de entorno
-Crea un archivo `.env` en la raíz del proyecto basándote en el `.env.example` proporcionado. Este archivo contendrá el `JWT_SECRET`, credenciales de bases de datos `SPRING_DATASOURCE_*` y del primer administrador (`ADMIN_EMAIL` y `ADMIN_PASSWORD`).
-
-### 2. Iniciar Infraestructura y Bases de Datos
-Puedes iniciar de forma automatizada PostgreSQL, Kafka, Prometheus, y opcionalmente todos los microservicios usando Docker Compose:
+### 1. Variables de entorno
 ```bash
-docker-compose up -d
+cp .env.example .env
 ```
-> **Nota**: El perfil por defecto (`dev`) en ejecución local utiliza bases de datos en memoria (H2). El perfil `docker` usa PostgreSQL y requiere proveer explícitamente las credenciales de base de datos (se hace vía `.env`).
+Edita `.env` (nunca se sube al repo):
 
-### 3. Iniciar Backend Localmente (Modo Desarrollo)
-Si prefieres correrlos en local fuera de Docker (usa el perfil `dev` que incluye H2 en memoria y `spring.jpa.show-sql=true` o `false`), corre en terminales separadas:
+| Variable | Descripción |
+|---|---|
+| `JWT_SECRET` | Mínimo 32 caracteres. Mismo valor para todos los servicios |
+| `POSTGRES_USER` / `POSTGRES_PASSWORD` | Credenciales de PostgreSQL |
+| `ADMIN_EMAIL` / `ADMIN_PASSWORD` | Administrador inicial de `usuario-api` (opcional) |
+
+### 2. Todo con Docker Compose
+```bash
+docker compose up -d --build
+docker compose ps
+```
+Levanta PostgreSQL, Kafka, Prometheus, los 5 servicios y el frontend. Cuando todo esté `healthy`, abre http://localhost:5173. Para apagar: `docker compose down` (con `-v` borra también los datos).
+
+### 3. Backend en modo desarrollo (sin Docker)
+En terminales separadas, con Kafka arriba si usas producto e inventario:
 ```bash
 (cd gateway-api && ./mvnw spring-boot:run)
 (cd usuario-api && ./mvnw spring-boot:run)
@@ -60,13 +88,32 @@ Si prefieres correrlos en local fuera de Docker (usa el perfil `dev` que incluye
 (cd pedido-api && ./mvnw spring-boot:run)
 ```
 
-### 4. Iniciar Frontend
+### 4. Frontend en modo desarrollo
 ```bash
 cd frontend-app
 npm install
 npm run dev
 ```
-La aplicación estará disponible apuntando al Gateway.
+Vite (5173) proxea `/api` al gateway en `http://localhost:8000`.
+
+## Endpoints principales (vía gateway, `:8000`)
+
+Las rutas protegidas requieren `Authorization: Bearer <token>`. El token sale del login (`{"token": "..."}`).
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| POST | `/api/usuarios/registro` | Registro (`nombre`, `email`, `password` de 8 a 72 caracteres) |
+| POST | `/api/usuarios/login` | Login (`email`, `password`) |
+| GET | `/api/usuarios/me` | Usuario autenticado |
+| GET / POST | `/api/productos` | Listar / crear producto (`nombre`, `descripcion`, `precio`) |
+| GET / PUT / DELETE | `/api/productos/{id}` | Detalle / editar / dar de baja |
+| GET / POST | `/api/inventarios/producto/{productoId}` | Consultar / inicializar inventario |
+| PUT | `/api/inventarios/producto/{productoId}/agregar` | Agregar stock (`cantidad`) |
+| PUT | `/api/inventarios/producto/{productoId}/reservar` | Reservar stock |
+| PUT | `/api/inventarios/producto/{productoId}/liberar` | Liberar stock |
+| POST | `/api/pedidos` | Crear pedido (`items: [{productoId, cantidad}]`) |
+| GET | `/api/pedidos/mis-pedidos` | Pedidos del usuario autenticado |
+| POST | `/api/pedidos/{id}/cancelar` | Cancelar pedido (libera el stock) |
 
 ## Pruebas
 
