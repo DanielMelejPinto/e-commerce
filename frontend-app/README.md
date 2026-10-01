@@ -1,12 +1,12 @@
 # frontend-app
 
-Tienda web del [e-commerce](../README.md), construida con **React 19**, **TypeScript** y **Vite**. Consume las cuatro APIs del backend a través del proxy de desarrollo de Vite.
+Tienda web del [e-commerce](../README.md), construida con **React 19**, **TypeScript** y **Vite**. Consume los microservicios del backend a través de un **API Gateway** centralizado.
 
 ## Funcionalidades
 
-- **Catálogo** de productos en la portada.
+- **Catálogo** de productos con paginación desde el servidor (Server-Side Pagination).
 - **Registro e inicio de sesión** contra `usuario-api`; el token JWT se guarda en `localStorage` y se envía en cada petición.
-- **Carrito** de compras y creación de pedidos en `pedido-api`.
+- **Carrito** de compras global y ultra-rápido manejado con Zustand, persistido en el navegador.
 - **Perfil** con los datos del usuario y su historial de pedidos.
 - **Panel de administración** (`/admin`, solo rol `ADMIN`): crear productos, ver el inventario y agregar stock.
 
@@ -26,18 +26,20 @@ Tienda web del [e-commerce](../README.md), construida con **React 19**, **TypeSc
 
 | Tecnología | Uso |
 |---|---|
-| React 19 + TypeScript | Interfaz y tipado |
-| Vite | Servidor de desarrollo y build |
+| React 19 + TypeScript | Interfaz y tipado estricto |
+| Vite | Servidor de desarrollo y build optimizado |
+| TanStack Query (React Query) | Fetching, caché y sincronización de datos de servidor |
+| Zustand | Manejo del estado global del cliente (Carrito) |
 | React Router 7 | Navegación y rutas protegidas |
 | Axios | Cliente HTTP con interceptor que agrega `Authorization: Bearer` |
+| Vitest | Framework de pruebas unitarias |
 | CSS Modules | Estilos por componente |
-| lucide-react | Iconos |
 | Oxlint | Linter |
 
 ## Requisitos
 
 - **Node.js** y npm.
-- El backend levantado (ver el [README raíz](../README.md#ejecución-local)): `usuario-api` para login y registro, `producto-api` para el catálogo, `inventario-api` para el panel de administración y `pedido-api` para comprar.
+- El backend levantado (ver el [README raíz](../README.md#cómo-ejecutar-el-proyecto-en-local)): Particularmente el **Gateway API (Puerto 8000)** por donde pasa todo el tráfico, junto al resto de microservicios.
 
 ## Cómo levantar el proyecto
 
@@ -55,20 +57,16 @@ La app queda en `http://localhost:5173`.
 | `npm run dev` | Servidor de desarrollo con HMR |
 | `npm run build` | Comprueba tipos (`tsc -b`) y genera el build de producción en `dist/` |
 | `npm run preview` | Sirve localmente el build de producción |
+| `npm run test` | Ejecuta las pruebas unitarias con Vitest |
 | `npm run lint` | Ejecuta Oxlint |
 
 ## Comunicación con el backend
 
-En desarrollo, `vite.config.ts` redirige las rutas de API a cada servicio, así que el navegador solo habla con `localhost:5173`:
+En desarrollo, `vite.config.ts` redirige las rutas de API al **API Gateway**, así que el navegador solo habla con `localhost:5173` y evita problemas de CORS:
 
 | Prefijo | Destino |
 |---|---|
-| `/api/productos` | `http://localhost:8080` |
-| `/api/inventarios` | `http://localhost:8081` |
-| `/api/usuarios` | `http://localhost:8082` |
-| `/api/pedidos` | `http://localhost:8083` |
-
-Si defines `VITE_API_URL`, Axios usará esa URL base en lugar del origen actual (por ejemplo, para apuntar a un backend desplegado). Ese proxy es **solo para desarrollo**: `npm run preview` y un despliegue estático no lo incluyen.
+| `/api/*` | `http://localhost:8000` (Gateway API) |
 
 ## Estructura del proyecto
 
@@ -76,22 +74,26 @@ Si defines `VITE_API_URL`, Axios usará esa URL base en lugar del origen actual 
 src/
 ├── api/          # Cliente Axios con el interceptor del token
 ├── components/   # Navbar, ProtectedRoute y AdminRoute
-├── context/      # AuthContext y CartContext
+├── context/      # AuthContext
 ├── features/
 │   ├── admin/    # Administración de productos e inventario
 │   ├── auth/     # Login, registro y perfil
 │   ├── cart/     # Carrito y confirmación del pedido
 │   └── products/ # Catálogo
 ├── layouts/      # MainLayout
-├── App.tsx       # Definición de rutas
+├── store/        # Zustand Stores (useCartStore.ts)
+├── types/        # Interfaces TypeScript globales
+├── App.tsx       # Definición de rutas y Providers
 └── main.tsx      # Punto de entrada
 ```
 
-## Limitaciones conocidas
+## Pruebas y CI/CD
 
-- Sin pruebas automatizadas; el CI del repositorio no ejecuta el frontend.
-- El token vive en `localStorage` y el control de acceso a `/admin` es solo visual.
-- Sin configuración de despliegue: hoy se usa con el proxy de desarrollo.
+El frontend cuenta con integración continua en GitHub Actions. En cada `push` o `Pull Request`, se ejecuta de forma automática:
+- Linting con Oxlint.
+- Verificación de tipos estáticos con TypeScript.
+- Pruebas unitarias de la lógica de estado (Vitest).
+- Build de producción.
 
 ## Autor
 
