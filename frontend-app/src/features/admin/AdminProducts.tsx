@@ -22,12 +22,12 @@ const AdminProducts = () => {
   const fetchProducts = async () => {
     try {
       const prodList = await productoService.obtenerTodos();
-      setProducts(prodList);
+      setProducts(prodList.content);
       
       // Fetch inventory for each product
       const invData: Record<number, Inventario> = {};
       await Promise.all(
-        prodList.map(async (p: Producto) => {
+        prodList.content.map(async (p: Producto) => {
           try {
             const inv = await inventarioService.obtenerPorProducto(p.id);
             invData[p.id] = inv;

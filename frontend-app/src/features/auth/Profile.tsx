@@ -59,7 +59,7 @@ const Profile = () => {
         
         // Crear mapa de productos para buscar el nombre por ID
         const pMap: Record<number, string> = {};
-        productosData.forEach((p: Producto) => {
+        productosData.content.forEach((p: Producto) => {
           pMap[p.id] = p.nombre;
         });
 
