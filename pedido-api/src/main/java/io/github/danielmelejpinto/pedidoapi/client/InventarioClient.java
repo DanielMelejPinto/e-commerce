@@ -67,13 +67,16 @@ public class InventarioClient {
     }
 
     public void fallbackReservarStock(Long productoId, Integer cantidad, Throwable t) {
-        if (t instanceof StockInsuficienteException) {
-            throw (StockInsuficienteException) t; // No hacer fallback si es error de negocio
+        if (t instanceof StockInsuficienteException || t instanceof DependenciaClienteException) {
+            throw (RuntimeException) t; // errores de negocio/cliente: no son "servicio caído"
         }
         throw new ServicioDependienteException("El servicio de inventario está inactivo. Fallback activado (Circuit Breaker).");
     }
 
     public void fallbackLiberarStock(Long productoId, Integer cantidad, Throwable t) {
+        if (t instanceof DependenciaClienteException) {
+            throw (RuntimeException) t;
+        }
         throw new ServicioDependienteException("El servicio de inventario está inactivo. Fallback activado (Circuit Breaker).");
     }
 }
