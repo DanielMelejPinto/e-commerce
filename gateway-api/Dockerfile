@@ -12,7 +12,7 @@ WORKDIR /app
 RUN addgroup -S spring && adduser -S spring -G spring
 USER spring:spring
 COPY --from=build /app/target/*.jar app.jar
-EXPOSE 8083
+EXPOSE 8000
 HEALTHCHECK --interval=10s --timeout=3s --start-period=30s --retries=3 \
-  CMD wget -q --spider http://localhost:8083/actuator/health || exit 1
+  CMD wget -q --spider http://localhost:8000/actuator/health || exit 1
 ENTRYPOINT ["java", "-jar", "app.jar"]

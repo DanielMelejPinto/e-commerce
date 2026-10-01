@@ -2,8 +2,13 @@
 ._.DS_Store
 **/.DS_Store
 
-.env
 target/
 .vscode/
+.idea/
+*.iml
+
 .env
-.env
+.env.*.local
+
+# Logs
+*.log
