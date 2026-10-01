@@ -9,3 +9,6 @@ target/
 
 .env
 .env.*.local
+
+# Logs
+*.log
