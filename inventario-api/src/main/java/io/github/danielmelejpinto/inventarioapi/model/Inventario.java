@@ -8,11 +8,10 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Version;
-import jakarta.persistence.CheckConstraint;
 import jakarta.persistence.Table;
 
 @Entity
-@Table(name = "inventario", check = @CheckConstraint(constraint = "cantidad_disponible >= 0 AND cantidad_reservada >= 0"))
+@Table(name = "inventario")
 public class Inventario {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
