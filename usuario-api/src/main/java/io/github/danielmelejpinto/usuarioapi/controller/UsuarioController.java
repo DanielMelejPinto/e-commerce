@@ -44,7 +44,7 @@ public class UsuarioController {
     @PostMapping("/login")
     @Operation(summary = "Iniciar sesión (autenticación)")
     @ApiResponse(responseCode = "200", description = "Autenticación exitosa, retorna token JWT")
-    @ApiResponse(responseCode = "401", description = "Credenciales incorrectas") // Este error lo arroja Spring Security automáticamente
+    @ApiResponse(responseCode = "401", description = "Credenciales incorrectas") // Lo mapea GlobalExceptionHandler (BadCredentialsException -> 401)
     public ResponseEntity<TokenResponse> login(@Valid @RequestBody LoginRequest request) {
         return ResponseEntity.ok(service.login(request));
     }
@@ -52,7 +52,7 @@ public class UsuarioController {
     @GetMapping("/me")
     @Operation(summary = "Obtener el perfil del usuario autenticado")
     @ApiResponse(responseCode = "200", description = "Perfil obtenido con éxito")
-    @ApiResponse(responseCode = "403", description = "No autenticado o token inválido")
+    @ApiResponse(responseCode = "401", description = "No autenticado o token inválido")
     public ResponseEntity<UsuarioResponse> obtenerMiPerfil(Authentication authentication) {
         String emailAutenticado = authentication.getName();
         return ResponseEntity.ok(service.obtenerPerfil(emailAutenticado));

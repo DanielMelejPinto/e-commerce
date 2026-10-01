@@ -216,10 +216,10 @@ class UsuarioControllerTest {
     // -------------------------------------------------------------
 
     @Test
-    void obtenerPerfil_sinToken_deberiaRetornar403() throws Exception {
+    void obtenerPerfil_sinToken_deberiaRetornar401() throws Exception {
         // Intenta acceder sin enviar el header Authorization
         mockMvc.perform(get("/api/usuarios/me"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
