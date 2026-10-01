@@ -40,7 +40,7 @@ check "login usuario" "$STATUS" 200
 UT=$(field token)
 
 req -X POST $BASE/api/pedidos -H "$J" -d '{"items":[{"productoId":1,"cantidad":1}]}'
-check "pedido sin token" "$STATUS" 403
+check "pedido sin token" "$STATUS" 401
 req -X POST $BASE/api/pedidos -H "Authorization: Bearer $UT" -H "$J" -d "{\"items\":[{\"productoId\":$PID,\"cantidad\":0}]}"
 check "pedido cantidad 0" "$STATUS" 400
 req -X POST $BASE/api/pedidos -H "Authorization: Bearer $UT" -H "$J" -d '{"items":[]}'
