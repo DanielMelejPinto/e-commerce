@@ -35,7 +35,7 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .headers(h -> h.frameOptions(f -> f.sameOrigin()))
             .authorizeHttpRequests(auth -> {
-                auth.requestMatchers("/actuator/**").permitAll();
+                auth.requestMatchers("/actuator/**", "/error").permitAll();
                 
                 if (apiDocsEnabled) {
                     auth.requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll();
