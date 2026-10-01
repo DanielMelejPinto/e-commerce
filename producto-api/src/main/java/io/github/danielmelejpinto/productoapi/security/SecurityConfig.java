@@ -36,6 +36,8 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .headers(h -> h.frameOptions(f -> f.sameOrigin()))
             .authorizeHttpRequests(auth -> {
+                // IMPORTANTE: "/error" debe seguir en permitAll. El reenvío interno a /error llega como
+                // anónimo; si no está permitido, el 403 por rol, el 404 y el 405 salen como 401.
                 auth.requestMatchers("/actuator/**", "/error").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/productos/**").permitAll();
                     
