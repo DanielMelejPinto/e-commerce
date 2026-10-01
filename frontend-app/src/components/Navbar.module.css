@@ -91,3 +91,18 @@
 .adminLink:hover {
   background-color: #495057;
 }
+
+@media (max-width: 500px) {
+  .header {
+    padding: 1rem;
+  }
+  .nav {
+    gap: 1rem;
+  }
+  .logo {
+    font-size: 1.2rem;
+  }
+  .userName {
+    display: none; /* Hide username on very small screens to save space */
+  }
+}

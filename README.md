@@ -74,5 +74,4 @@ Comando local para probar cualquier microservicio:
 ```
 
 ---
-*Desarrollado como demostración de arquitectura, código limpio e ingeniería de software moderna.*
 **Autor:** [Daniel Melej Pinto](https://github.com/DanielMelejPinto)
