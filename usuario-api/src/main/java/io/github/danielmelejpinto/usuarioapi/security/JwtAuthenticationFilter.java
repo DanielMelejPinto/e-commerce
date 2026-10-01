@@ -5,6 +5,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -52,7 +53,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 
                 // Cargamos los datos del usuario desde la base de datos (con nuestro CustomUserDetailsService)
-                UserDetails userDetails = this.userDetailsService.loadUserByUsername(email);
+                UserDetails userDetails;
+                try {
+                    userDetails = this.userDetailsService.loadUserByUsername(email);
+                } catch (AuthenticationException e) {
+                    // Usuario borrado o dado de baja con un token aún vigente: seguir como anónimo (-> 401)
+                    SecurityContextHolder.clearContext();
+                    filterChain.doFilter(request, response);
+                    return;
+                }
 
                 // 6. Creamos el objeto de autenticación que usa Spring
                 UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
