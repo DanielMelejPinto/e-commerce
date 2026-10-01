@@ -1,4 +1,4 @@
-# E-Commerce Microservices Portfolio 🚀
+# E-Commerce Microservices Portfolio 
 
 ![Java 21](https://img.shields.io/badge/Java-21-ED8B00?style=for-the-badge&logo=java&logoColor=white)
 ![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.4.1-6DB33F?style=for-the-badge&logo=spring-boot&logoColor=white)
@@ -10,7 +10,7 @@ Este es un proyecto *full-stack* y *cloud-native* que implementa una plataforma 
 
 Ha sido desarrollado metódicamente a través de **14 fases de refactorización y mejora continua**, aplicando patrones de diseño avanzados, buenas prácticas de DevOps, seguridad y rendimiento, con el objetivo de demostrar un nivel de ingeniería de software de calidad *senior*.
 
-## 🏗️ Arquitectura de Microservicios
+##  Arquitectura de Microservicios
 
 El backend está compuesto por 4 microservicios independientes que se comunican mediante HTTP REST y patrones de consistencia eventual.
 
@@ -19,7 +19,7 @@ El backend está compuesto por 4 microservicios independientes que se comunican 
 3. **`inventario-api` (Puerto 8081)**: Gestión de stock (disponible y reservado). Maneja concurrencia mediante **Optimistic Locking** (`@Version`).
 4. **`pedido-api` (Puerto 8083)**: Orquestador central. Implementa el patrón **Saga Coreografiada (Compensación)** y protección contra retrys mediante **Idempotency Keys**.
 
-### 🌟 Patrones y Prácticas Implementadas (Backend)
+###  Patrones y Prácticas Implementadas (Backend)
 - **Seguridad Centralizada (JWT)**: Todos los microservicios validan un JWT simétrico para rutas protegidas (`ADMIN` para escritura, `USER` para compras).
 - **Patrón Outbox y ShedLock**: En `producto-api` para garantizar la entrega "al menos una vez" de eventos hacia `inventario-api`, con soporte para concurrencia horizontal (ShedLock sobre tabla de base de datos).
 - **Manejo de Transacciones Distribuidas**: `pedido-api` orquesta la reserva de stock. Si hay un fallo posterior (por ej. base de datos caída), ejecuta rutinas de compensación (liberación de stock).
@@ -28,7 +28,7 @@ El backend está compuesto por 4 microservicios independientes que se comunican 
 - **Migraciones (Flyway)**: Control de versiones de esquema de base de datos para entornos reproducibles.
 - **Observabilidad**: Integración nativa con **Spring Boot Actuator** y **Prometheus** (`/actuator/prometheus`) para monitoreo de métricas.
 
-## 🎨 Frontend (React 19 + TypeScript + Vite)
+##  Frontend (React 19 + TypeScript + Vite)
 
 El frontend (`frontend-app`) se rediseñó bajo estándares estrictos de la industria:
 - **Tipado Estricto (TypeScript)**: `verbatimModuleSyntax` habilitado, interfaces globales y 0% de uso de `any`.
@@ -37,7 +37,7 @@ El frontend (`frontend-app`) se rediseñó bajo estándares estrictos de la indu
 - **Accesibilidad (a11y)**: HTML Semántico (`<main>`, `<article>`, `<aside>`), y etiquetas ARIA (`aria-label`, `aria-busy`, `role="alert"`) orientadas a accesibilidad web (Lighthouse friendly).
 - **Testing (Vitest + Testing Library)**: Tests unitarios al contexto de la aplicación, emulando el DOM con `jsdom` para asegurar el flujo de la canasta de compras.
 
-## 🚀 Cómo ejecutar el proyecto en local
+##  Cómo ejecutar el proyecto en local
 
 ### 1. Iniciar Bases de Datos (PostgreSQL)
 Asegúrate de tener Docker instalado y ejecutándose:
@@ -63,7 +63,7 @@ npm run dev
 ```
 La aplicación estará disponible en `http://localhost:5173`.
 
-## 🧪 Pruebas y CI/CD (GitHub Actions)
+##  Pruebas y CI/CD (GitHub Actions)
 
 El repositorio incluye automatización completa de integración continua (CI) en `.github/workflows/`:
 1. **`ci.yml` (Backend)**: Compila y ejecuta la suite de pruebas unitarias y de integración (vía *Testcontainers*) para los 4 módulos de Java con JDK 21.
