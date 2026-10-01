@@ -6,6 +6,5 @@ import java.util.List;
 
 public record PedidoRequest(
     @NotEmpty(message = "El pedido debe tener al menos un item")
-    @Valid
-    List<PedidoItemRequest> items
+    List<@Valid PedidoItemRequest> items
 ) {}
