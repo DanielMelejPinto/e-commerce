@@ -1,0 +1,1 @@
+ALTER TABLE pedido_items ALTER COLUMN cantidad TYPE INTEGER;
