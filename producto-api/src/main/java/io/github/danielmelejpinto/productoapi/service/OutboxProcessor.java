@@ -45,7 +45,7 @@ public class OutboxProcessor {
         this.transactionTemplate = transactionTemplate;
     }
 
-    @Scheduled(fixedDelay = 5000)
+    @Scheduled(fixedDelayString = "${outbox.poll-interval-ms:5000}")
     @SchedulerLock(name = "procesarEventosPendientesTask", lockAtLeastFor = "${outbox.lock-min:PT4S}", lockAtMostFor = "${outbox.lock-max:PT14M}")
     public void procesarEventosPendientes() {
         List<OutboxEvent> pendientes = eventRepository.findPendingEvents(EstadoEvento.PENDIENTE, LocalDateTime.now());
