@@ -14,6 +14,9 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
+import org.springframework.security.authentication.InternalAuthenticationServiceException;
+import org.springframework.security.core.AuthenticationException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -49,11 +52,24 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", ex.getMessage()));
     }
 
-    // 401: credenciales incorrectas en login
-    @ExceptionHandler(BadCredentialsException.class)
-    public ResponseEntity<Map<String, String>> manejarCredencialesInvalidas(BadCredentialsException ex) {
+    // 401: credenciales incorrectas, o cuenta dada de baja (mismo mensaje: no revela que la cuenta existe)
+    @ExceptionHandler({BadCredentialsException.class, DisabledException.class})
+    public ResponseEntity<Map<String, String>> manejarCredencialesInvalidas(AuthenticationException ex) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(Map.of("error", "Email o contraseña incorrectos"));
+    }
+
+    // Spring envuelve en InternalAuthenticationServiceException lo que lance el UserDetailsService
+    // (salvo UsernameNotFoundException). Si la causa es una cuenta de baja -> 401 genérico; si no, 500.
+    @ExceptionHandler(InternalAuthenticationServiceException.class)
+    public ResponseEntity<Map<String, String>> manejarFalloInternoDeAutenticacion(InternalAuthenticationServiceException ex) {
+        if (ex.getCause() instanceof DisabledException) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "Email o contraseña incorrectos"));
+        }
+        log.error("Error interno de autenticación", ex);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "Error interno del servidor"));
     }
 
     // 500: respaldo para lo imprevisto (el detalle va al log, nunca al cliente)

@@ -19,6 +19,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultActions;
 
+import com.jayway.jsonpath.JsonPath;
+import io.github.danielmelejpinto.usuarioapi.model.EstadoUsuario;
 import io.github.danielmelejpinto.usuarioapi.model.Rol;
 import io.github.danielmelejpinto.usuarioapi.model.Usuario;
 import io.github.danielmelejpinto.usuarioapi.repository.UsuarioRepository;
@@ -219,6 +221,55 @@ class UsuarioControllerTest {
     void obtenerPerfil_sinToken_deberiaRetornar401() throws Exception {
         // Intenta acceder sin enviar el header Authorization
         mockMvc.perform(get("/api/usuarios/me"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    // -------------------------------------------------------------
+    // USUARIO DADO DE BAJA
+    // -------------------------------------------------------------
+
+    private String cuerpoLogin(String email, String password) {
+        return "{\"email\": \"" + email + "\", \"password\": \"" + password + "\"}";
+    }
+
+    private void darDeBaja(String email) {
+        Usuario usuario = repository.findByEmail(email).orElseThrow();
+        usuario.setEstado(EstadoUsuario.BAJA);
+        repository.save(usuario);
+    }
+
+    @Test
+    void login_conUsuarioEnBaja_deberiaRetornar401ConMensajeGenerico() throws Exception {
+        String email = emailUnico();
+        String password = "ClaveParaBaja123";
+
+        registrar(cuerpo("Usuario Baja", email, password)).andExpect(status().isCreated());
+        darDeBaja(email);
+
+        mockMvc.perform(post("/api/usuarios/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(cuerpoLogin(email, password)))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error").value("Email o contraseña incorrectos"));
+    }
+
+    @Test
+    void obtenerPerfil_conTokenDeUsuarioEnBaja_deberiaRetornar401() throws Exception {
+        String email = emailUnico();
+        String password = "ClaveParaBaja123";
+
+        registrar(cuerpo("Usuario Baja", email, password)).andExpect(status().isCreated());
+
+        MvcResult login = mockMvc.perform(post("/api/usuarios/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(cuerpoLogin(email, password)))
+                .andExpect(status().isOk())
+                .andReturn();
+        String token = JsonPath.read(login.getResponse().getContentAsString(), "$.token");
+
+        darDeBaja(email);
+
+        mockMvc.perform(get("/api/usuarios/me").header("Authorization", "Bearer " + token))
                 .andExpect(status().isUnauthorized());
     }
 
