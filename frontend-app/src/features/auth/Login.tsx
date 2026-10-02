@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { usuarioService } from '../../services/usuarioService';
 import { useAuth } from '../../context/AuthContext';
+import { extractErrorMessage } from '../../utils/errorHelper';
 import styles from './Login.module.css';
 
 const Login = () => {
@@ -27,15 +28,14 @@ const Login = () => {
       navigate('/');
     } catch (err: unknown) {
       if (typeof err === 'object' && err !== null && 'response' in err) {
-        const error = err as { response?: { status?: number } };
-        if (error.response?.status === 401) {
+        const errResp = err as { response?: { status?: number } };
+        if (errResp.response?.status === 401) {
           setError('Credenciales incorrectas');
-        } else {
-          setError('Error de conexión con el servidor');
+          setLoading(false);
+          return;
         }
-      } else {
-        setError('Error desconocido');
       }
+      setError(extractErrorMessage(err, 'Error de conexión con el servidor'));
     } finally {
       setLoading(false);
     }

@@ -12,14 +12,39 @@ export interface PedidoRequest {
 
 export const pedidoService = {
   crearPedido: async (data: PedidoRequest): Promise<Pedido> => {
-    // Add Idempotency-Key
-    const idempotencyKey = crypto.randomUUID();
-    const response = await api.post('/api/pedidos', data, {
-      headers: {
-        'Idempotency-Key': idempotencyKey
+    const cartHash = JSON.stringify(data);
+    let storedState = localStorage.getItem('checkout_state');
+    let idempotencyKey = crypto.randomUUID();
+
+    if (storedState) {
+      try {
+        const parsed = JSON.parse(storedState);
+        if (parsed.cartHash === cartHash && parsed.idempotencyKey) {
+          idempotencyKey = parsed.idempotencyKey;
+        } else {
+          // If cart changed, start a new logical attempt
+          localStorage.setItem('checkout_state', JSON.stringify({ cartHash, idempotencyKey }));
+        }
+      } catch (e) {
+        localStorage.setItem('checkout_state', JSON.stringify({ cartHash, idempotencyKey }));
       }
-    });
-    return response.data;
+    } else {
+      localStorage.setItem('checkout_state', JSON.stringify({ cartHash, idempotencyKey }));
+    }
+
+    try {
+      const response = await api.post('/api/pedidos', data, {
+        headers: {
+          'Idempotency-Key': idempotencyKey
+        }
+      });
+      // Clear on success
+      localStorage.removeItem('checkout_state');
+      return response.data;
+    } catch (error) {
+      // Keep it in localStorage for retries
+      throw error;
+    }
   },
 
   obtenerMisPedidos: async (): Promise<Pedido[]> => {
@@ -32,4 +57,3 @@ export const pedidoService = {
     return response.data;
   }
 };
-

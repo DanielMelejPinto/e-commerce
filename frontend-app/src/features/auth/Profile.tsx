@@ -3,9 +3,9 @@ import { useAuth } from '../../context/AuthContext';
 import { pedidoService } from '../../services/pedidoService';
 import { productoService } from '../../services/productoService';
 import type { Pedido, Producto } from '../../types';
+import { extractErrorMessage } from '../../utils/errorHelper';
 import styles from './Profile.module.css';
 
-// Componente interactivo para evitar window.confirm
 const CancelButton = ({ onConfirm, disabled }: { onConfirm: () => void, disabled?: boolean }) => {
   const [asking, setAsking] = useState(false);
 
@@ -52,18 +52,18 @@ const Profile = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [pedidosData, productosData] = await Promise.all([
-          pedidoService.obtenerMisPedidos(),
-          productoService.obtenerTodos()
-        ]);
+        const pedidosData = await pedidoService.obtenerMisPedidos();
         
-        // Crear mapa de productos para buscar el nombre por ID
+        // Extract unique product IDs
+        const productIds = Array.from(new Set(pedidosData.flatMap((p: Pedido) => p.items.map(i => i.productoId))));
+        
+        const productosData = await productoService.obtenerHistorial(productIds);
+        
         const pMap: Record<number, string> = {};
-        productosData.content.forEach((p: Producto) => {
+        productosData.forEach((p: Producto) => {
           pMap[p.id] = p.nombre;
         });
 
-        // Ordenar pedidos del más nuevo al más viejo
         const sortedPedidos = pedidosData.sort((a, b) => 
           new Date(b.fechaCreacion).getTime() - new Date(a.fechaCreacion).getTime()
         );
@@ -86,12 +86,7 @@ const Profile = () => {
       const pedidoCancelado = await pedidoService.cancelarPedido(pedidoId);
       setPedidos((prev) => prev.map((p) => (p.id === pedidoId ? pedidoCancelado : p)));
     } catch (error: unknown) {
-      if (typeof error === 'object' && error !== null && 'response' in error) {
-        const err = error as { response?: { data?: { message?: string } } };
-        alert(err.response?.data?.message || 'Error al cancelar el pedido');
-      } else {
-        alert('Error al cancelar el pedido');
-      }
+      alert(extractErrorMessage(error, 'Error al cancelar el pedido'));
     } finally {
       setCanceling(null);
     }

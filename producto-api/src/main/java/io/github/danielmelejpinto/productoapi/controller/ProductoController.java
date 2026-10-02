@@ -62,6 +62,22 @@ public class ProductoController {
         return ResponseEntity.ok(new PagedModel<>(service.obtenerTodos(nombre, pageable)));
     }
 
+    @GetMapping("/admin")
+    @Operation(summary = "Listar todos los productos (incluidos pendientes/baja) para administradores")
+    public ResponseEntity<PagedModel<ProductoResponse>> listarTodosAdmin(
+            @org.springframework.web.bind.annotation.RequestParam(required = false) String nombre,
+            @PageableDefault(size = 10, sort = "id") Pageable pageable) {
+        return ResponseEntity.ok(new PagedModel<>(service.obtenerTodosAdmin(nombre, pageable)));
+    }
+
+    @PostMapping("/outbox/reintentar")
+    @Operation(summary = "Reintentar manualmente eventos fallidos")
+    public ResponseEntity<Void> reintentarEventosFallidos(
+        @org.springframework.beans.factory.annotation.Autowired io.github.danielmelejpinto.productoapi.service.OutboxProcessor processor) {
+        processor.reintentarEventosFallidos();
+        return ResponseEntity.ok().build();
+    }
+
     @GetMapping("/{id}")
     @Operation(summary = "Obtener un producto por id")
     @ApiResponse(responseCode = "200", description = "Producto encontrado")
