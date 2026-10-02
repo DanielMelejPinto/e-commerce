@@ -83,7 +83,7 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/usuario_db
       - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER:-ecommerce_user}
       - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD:?define POSTGRES_PASSWORD en .env}
-      - JWT_SECRET=${JWT_SECRET}
+      - JWT_SECRET=${JWT_SECRET:?define JWT_SECRET en .env}
       - ADMIN_EMAIL=${ADMIN_EMAIL}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD}
     depends_on:
@@ -101,7 +101,7 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/producto_db
       - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER:-ecommerce_user}
       - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD:?define POSTGRES_PASSWORD en .env}
-      - JWT_SECRET=${JWT_SECRET}
+      - JWT_SECRET=${JWT_SECRET:?define JWT_SECRET en .env}
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
     depends_on:
       postgres:
@@ -121,7 +121,7 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/inventario_db
       - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER:-ecommerce_user}
       - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD:?define POSTGRES_PASSWORD en .env}
-      - JWT_SECRET=${JWT_SECRET}
+      - JWT_SECRET=${JWT_SECRET:?define JWT_SECRET en .env}
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
     depends_on:
       postgres:
@@ -140,7 +140,7 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/pedido_db
       - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER:-ecommerce_user}
       - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD:?define POSTGRES_PASSWORD en .env}
-      - JWT_SECRET=${JWT_SECRET}
+      - JWT_SECRET=${JWT_SECRET:?define JWT_SECRET en .env}
       - PRODUCTO_URL=http://producto-api:8080/api/productos
       - INVENTARIO_URL=http://inventario-api:8081/api/inventarios
       - USUARIO_URL=http://usuario-api:8082/api/usuarios
