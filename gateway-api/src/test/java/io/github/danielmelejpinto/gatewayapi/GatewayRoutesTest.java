@@ -21,14 +21,14 @@ class GatewayRoutesTest {
     @Test
     void cargaLasRutasConfiguradas() {
         List<Route> routes = routeLocator.getRoutes().collectList().block();
-        assertThat(routes).extracting(Route::getId)
+        assertThat(routes).extracting(route -> route.getId())
                 .containsExactlyInAnyOrder("producto-api", "inventario-api", "usuario-api", "pedido-api");
     }
 
     @Test
     void cadaRutaApuntaASuServicioPorDefecto() {
         Map<String, String> uris = routeLocator.getRoutes().collectList().block().stream()
-                .collect(Collectors.toMap(Route::getId, r -> r.getUri().toString()));
+                .collect(Collectors.toMap(r -> r.getId(), r -> r.getUri().toString()));
         assertThat(uris).containsEntry("producto-api", "http://localhost:8080")
                 .containsEntry("inventario-api", "http://localhost:8081")
                 .containsEntry("usuario-api", "http://localhost:8082")
