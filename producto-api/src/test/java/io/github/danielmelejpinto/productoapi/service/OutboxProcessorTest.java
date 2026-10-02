@@ -53,6 +53,9 @@ class OutboxProcessorTest {
             return null;
         }).when(transactionTemplate).executeWithoutResult(any());
 
+        org.mockito.Mockito.lenient().when(kafkaTemplate.send(any(), any(), any()))
+                .thenReturn(java.util.concurrent.CompletableFuture.completedFuture(null));
+
         processor = new OutboxProcessor(eventRepository, productoRepository, kafkaTemplate, transactionTemplate);
         org.springframework.test.util.ReflectionTestUtils.setField(processor, "maxIntentos", 5);
     }
@@ -105,6 +108,31 @@ class OutboxProcessorTest {
         assertThat(event.getEstado()).isEqualTo(EstadoEvento.ENVIADO);
         verify(productoRepository).save(producto);
         verify(eventRepository).save(event);
+    }
+
+    @Test
+    void procesarEventosPendientes_kafkaRechazaElMensaje_noDeberiaMarcarEnviado() {
+        OutboxEvent event = new OutboxEvent();
+        event.setId(1L);
+        event.setProductoId(10L);
+        event.setEstado(EstadoEvento.PENDIENTE);
+        event.setIntentos(0);
+
+        Producto producto = new Producto();
+        producto.setId(10L);
+        producto.setEstado(EstadoProducto.PENDIENTE);
+
+        when(eventRepository.findPendingEvents(any(), any())).thenReturn(List.of(event));
+        when(productoRepository.findById(10L)).thenReturn(Optional.of(producto));
+        when(kafkaTemplate.send(any(), any(), any()))
+                .thenReturn(java.util.concurrent.CompletableFuture.failedFuture(new RuntimeException("broker rechazo")));
+
+        processor.procesarEventosPendientes();
+
+        assertThat(event.getEstado()).isEqualTo(EstadoEvento.PENDIENTE);
+        assertThat(event.getIntentos()).isEqualTo(1);
+        assertThat(producto.getEstado()).isEqualTo(EstadoProducto.PENDIENTE);
+        verify(productoRepository, never()).save(producto);
     }
 
     @Test

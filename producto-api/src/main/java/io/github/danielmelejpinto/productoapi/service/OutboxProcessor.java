@@ -68,7 +68,8 @@ public class OutboxProcessor {
 
             try {
                 // 1. PUBLICAR EN KAFKA (Fuera de la transacción de BD)
-                kafkaTemplate.send("producto-events", String.valueOf(producto.getId()), producto);
+                kafkaTemplate.send("producto-events", String.valueOf(producto.getId()), producto)
+                        .get(10, java.util.concurrent.TimeUnit.SECONDS); // esperar el ack del broker
                 
                 // 2. ACTUALIZACIÓN ATÓMICA DE BD LOCAL
                 transactionTemplate.executeWithoutResult(status -> {
