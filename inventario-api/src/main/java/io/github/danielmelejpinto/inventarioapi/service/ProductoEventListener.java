@@ -29,9 +29,9 @@ public class ProductoEventListener {
             } else {
                 log.warn("Evento Kafka recibido sin ID de producto: {}", payload);
             }
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             log.error("Error al procesar evento Kafka: {}", e.getMessage());
-            // En un caso real, podríamos enviar esto a un Dead Letter Queue (DLQ)
+            throw e; // el DefaultErrorHandler reintenta con backoff; si se agotan, deja un ERROR explícito
         }
     }
 }
