@@ -103,7 +103,7 @@ Con la app corriendo: `http://localhost:8080/swagger-ui.html` (OpenAPI en `/v3/a
 
 **Paginación y orden** (`GET /api/productos`): `?page` (desde 0), `?size` (por defecto 10, máx. 50) y `?sort` (`id`, `nombre`, `precio`, `fechaCreacion`). Ejemplo: `?sort=precio,desc`.
 
-**Validaciones:** `nombre` obligatorio (máx. 150 caracteres); `precio` obligatorio, mayor a cero, hasta 10 enteros y 2 decimales; `descripcion` e `imagenUrl` opcionales.
+**Validaciones:** `nombre` obligatorio (máx. 150 caracteres); `precio` obligatorio, mayor a cero, hasta 17 enteros y 2 decimales; `descripcion` e `imagenUrl` opcionales.
 
 ### Ejemplo — crear un producto
 

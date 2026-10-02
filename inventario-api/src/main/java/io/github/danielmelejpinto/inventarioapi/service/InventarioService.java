@@ -75,11 +75,13 @@ public class InventarioService {
 
     @Transactional
     public void eliminarInventario(Long productoId) {
-        Inventario inventario = buscar(productoId);
-        if (inventario.getCantidadReservada() > 0) {
-            throw new IllegalStateException("No se puede eliminar el inventario porque tiene reservas activas");
-        }
-        repository.findByProductoId(productoId).ifPresent(repository::delete);
+        // Idempotente: si no existe, no hace nada (204). Si tiene reservas activas, no se borra.
+        repository.findByProductoId(productoId).ifPresent(inventario -> {
+            if (inventario.getCantidadReservada() > 0) {
+                throw new IllegalStateException("No se puede eliminar el inventario porque tiene reservas activas");
+            }
+            repository.delete(inventario);
+        });
     }
 
     private Inventario buscar(Long productoId) {

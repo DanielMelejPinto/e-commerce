@@ -135,6 +135,7 @@ public class PedidoService {
 
         BigDecimal total = BigDecimal.ZERO;
         boolean error = false;
+        List<PedidoItem> nuevosItems = new java.util.ArrayList<>();
 
         // Limpiamos items para reconstruir en caso de reintento de pedido PENDIENTE fallido
         // pedido.getItems().clear(); 
@@ -149,17 +150,16 @@ public class PedidoService {
                 inventarioClient.reservarStock(itemReq.productoId(), itemReq.cantidad(), pedido.getId());
 
                 // Solo agregamos el item si no estaba antes (por idempotencia)
-                boolean itemExiste = pedido.getItems().stream().anyMatch(i -> i.getProductoId().equals(itemReq.productoId()));
+                boolean itemExiste = pedido.getItems().stream().anyMatch(i -> i.getProductoId().equals(itemReq.productoId()))
+                        || nuevosItems.stream().anyMatch(i -> i.getProductoId().equals(itemReq.productoId()));
                 if (!itemExiste) {
                     PedidoItem item = new PedidoItem();
                     item.setProductoId(itemReq.productoId());
                     item.setCantidad(itemReq.cantidad());
                     item.setPrecioUnitario(producto.precio());
-                    total = total.add(producto.precio().multiply(new BigDecimal(itemReq.cantidad())));
-                    pedido.addItem(item);
-                } else {
-                    total = total.add(producto.precio().multiply(new BigDecimal(itemReq.cantidad())));
+                    nuevosItems.add(item);
                 }
+                total = total.add(producto.precio().multiply(new BigDecimal(itemReq.cantidad())));
             }
         } catch (Exception e) {
             error = true;
@@ -178,12 +178,20 @@ public class PedidoService {
             throw e;
         }
         
-        return finalizarPedido(pedido.getId(), total, idempotencyKey);
+        // Via proxy: si se llama con `this`, @Transactional se ignora
+        return context.getBean(PedidoService.class).finalizarPedido(pedido.getId(), total, nuevosItems, idempotencyKey);
     }
 
     @Transactional
-    public Pedido finalizarPedido(Long pedidoId, BigDecimal total, String idempotencyKey) {
+    public Pedido finalizarPedido(Long pedidoId, BigDecimal total, List<PedidoItem> nuevosItems, String idempotencyKey) {
         Pedido pedido = pedidoRepository.findById(pedidoId).orElseThrow();
+        // El Pedido de crearPedido esta detached: los items hay que anadirlos aqui, dentro de la transaccion
+        for (PedidoItem item : nuevosItems) {
+            boolean yaExiste = pedido.getItems().stream().anyMatch(i -> i.getProductoId().equals(item.getProductoId()));
+            if (!yaExiste) {
+                pedido.addItem(item);
+            }
+        }
         pedido.setTotal(total);
         pedido.setEstado(EstadoPedido.CONFIRMADO);
         pedido = pedidoRepository.save(pedido);
@@ -229,7 +237,8 @@ public class PedidoService {
             }
         }
 
-        return confirmarCancelacion(pedidoId, usuarioId);
+        // Via proxy: el UPDATE @Modifying exige transaccion y `this` se saltaria el @Transactional
+        return context.getBean(PedidoService.class).confirmarCancelacion(pedidoId, usuarioId);
     }
 
     @Transactional

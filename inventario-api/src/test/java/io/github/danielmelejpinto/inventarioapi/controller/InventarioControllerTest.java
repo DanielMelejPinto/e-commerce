@@ -42,6 +42,7 @@ class InventarioControllerTest {
     private MockMvc mockMvc;
 
     private static final AtomicLong NEXT_ID = new AtomicLong(1000L);
+    private static final AtomicLong PEDIDO_ID = new AtomicLong(1L);
 
     @Test
     void obtener_conInventarioExistente_deberiaRetornar200() throws Exception {
@@ -217,7 +218,7 @@ class InventarioControllerTest {
 
         mockMvc.perform(put("/api/inventarios/producto/{id}/reservar", productoId)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"cantidad\": 3}"))
+                .content("{\"cantidad\": 3, \"pedidoId\": 1}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.cantidadDisponible").value(7))
                 .andExpect(jsonPath("$.cantidadReservada").value(3));
@@ -234,7 +235,7 @@ class InventarioControllerTest {
 
         mockMvc.perform(put("/api/inventarios/producto/{id}/reservar", productoId)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"cantidad\": 10}"))
+                .content("{\"cantidad\": 10, \"pedidoId\": 1}"))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error").value("Stock insuficiente para el producto " + productoId + ": disponible 5, solicitado 10"));
     }
@@ -245,7 +246,7 @@ class InventarioControllerTest {
 
         mockMvc.perform(put("/api/inventarios/producto/{id}/reservar", productoId)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"cantidad\": -1}"))
+                .content("{\"cantidad\": -1, \"pedidoId\": 1}"))
                 .andExpect(status().isBadRequest());
     }
 
@@ -255,7 +256,7 @@ class InventarioControllerTest {
 
         mockMvc.perform(put("/api/inventarios/producto/{id}/reservar", productoId)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"cantidad\": 5}"))
+                .content("{\"cantidad\": 5, \"pedidoId\": 1}"))
                 .andExpect(status().isNotFound());
     }
 
@@ -304,7 +305,7 @@ class InventarioControllerTest {
                 }
                 MvcResult result = mockMvc.perform(put("/api/inventarios/producto/{id}/reservar", productoId)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"cantidad\": 1}"))
+                        .content("{\"cantidad\": 1, \"pedidoId\": " + PEDIDO_ID.getAndIncrement() + "}"))
                         .andReturn();
 
                 int status = result.getResponse().getStatus();
