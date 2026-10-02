@@ -22,6 +22,7 @@ import io.github.danielmelejpinto.inventarioapi.exception.InventarioNoEncontrado
 import io.github.danielmelejpinto.inventarioapi.exception.StockInsuficienteException;
 import io.github.danielmelejpinto.inventarioapi.model.Inventario;
 import io.github.danielmelejpinto.inventarioapi.repository.InventarioRepository;
+import io.github.danielmelejpinto.inventarioapi.repository.ReservaRepository;
 import org.springframework.dao.DataIntegrityViolationException;
 
 @ExtendWith(MockitoExtension.class)
@@ -57,6 +58,9 @@ class InventarioServiceTest {
 
     @Mock
     private InventarioRepository repository;
+
+    @Mock
+    private ReservaRepository reservaRepository;
 
     @InjectMocks
     private InventarioService service;
@@ -233,6 +237,7 @@ class InventarioServiceTest {
         Long productoId = 1L;
         Inventario inventario = new Inventario();
         inventario.setProductoId(productoId);
+        inventario.setCantidadReservada(0L);
         when(repository.findByProductoId(productoId)).thenReturn(Optional.of(inventario));
 
         service.eliminarInventario(productoId);

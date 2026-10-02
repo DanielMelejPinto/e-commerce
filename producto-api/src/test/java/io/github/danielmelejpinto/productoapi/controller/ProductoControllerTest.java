@@ -179,18 +179,18 @@ class ProductoControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(cuerpo("Teclado", "10.123")))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.precio").value("El precio admite hasta 10 enteros y 2 decimales"));
+                .andExpect(jsonPath("$.precio").value("El precio admite hasta 17 enteros y 2 decimales"));
     }
 
     @Test
-    void crear_conMasDeDiezEnteros_deberiaRetornar400() throws Exception {
-        // 11 dígitos enteros: antes de @Digits esto provocaba un 500 en la base de
-        // datos
+    void crear_conMasDeDiecisieteEnteros_deberiaRetornar400() throws Exception {
+        // 18 dígitos enteros (el límite es 17, igual que NUMERIC(19,2)): antes de @Digits
+        // esto provocaba un 500 en la base de datos
         mockMvc.perform(post(URL)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(cuerpo("Teclado", "12345678901")))
+                .content(cuerpo("Teclado", "123456789012345678")))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.precio").value("El precio admite hasta 10 enteros y 2 decimales"));
+                .andExpect(jsonPath("$.precio").value("El precio admite hasta 17 enteros y 2 decimales"));
     }
 
     @Test
@@ -242,8 +242,8 @@ class ProductoControllerTest {
 
     @Test
     void listarTodos_ordenadoPorPrecioDescendente_deberiaDevolverElMasCaroPrimero() throws Exception {
-        // 9999999999.99 es el precio máximo permitido: ningún otro test lo usa
-        crearProducto("MasCaro", "9999999999.99");
+        // 99999999999999999.99 (17 enteros) es el precio máximo permitido: ningún otro test lo usa
+        crearProducto("MasCaro", "99999999999999999.99");
 
         mockMvc.perform(get(URL).param("sort", "precio,desc").param("size", "1"))
                 .andExpect(status().isOk())
