@@ -21,7 +21,7 @@ BASE=http://localhost:5173
 J='Content-Type: application/json'
 FAIL=0
 
-req()   { RESP=$(curl --max-time 10 --connect-timeout 5 -s -w $'\n%{http_code}' "$@"); STATUS=${RESP##*$'\n'}; BODY=${RESP%$'\n'*}; }
+req()   { RESP=$(curl --max-time 10 --connect-timeout 5 -s -w $'\n%{http_code}' "$@" || true); STATUS=${RESP##*$'\n'}; BODY=${RESP%$'\n'*}; }
 field() { echo "$BODY" | python3 -c "import json,sys;print(json.load(sys.stdin).get('$1',''))" 2>/dev/null; }
 check() { if [ "$2" = "$3" ]; then echo "OK    $1"; else echo "FALLA $1 (esperado $3, obtuvo '$2')"; echo "      status: $STATUS cuerpo: $(echo "$BODY" | head -c 300)"; FAIL=1; fi; }
 jbody() { python3 -c "import json,os,sys;print(json.dumps(dict(a.split('=',1) for a in sys.argv[1:])))" "$@"; }
