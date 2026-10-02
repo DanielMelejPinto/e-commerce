@@ -50,6 +50,7 @@ public class SecurityConfig {
                 auth.requestMatchers(HttpMethod.POST, "/api/inventarios/producto/**").hasAnyRole("ADMIN", "SYSTEM")
                     .requestMatchers(HttpMethod.DELETE, "/api/inventarios/producto/**").hasRole("ADMIN")
                     .requestMatchers(HttpMethod.PUT, "/api/inventarios/producto/*/agregar").hasRole("ADMIN")
+                    .requestMatchers(HttpMethod.PUT, "/api/inventarios/producto/*/reservar", "/api/inventarios/producto/*/liberar").hasAnyRole("ADMIN", "SYSTEM")
                     .anyRequest().authenticated();
             })
             .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

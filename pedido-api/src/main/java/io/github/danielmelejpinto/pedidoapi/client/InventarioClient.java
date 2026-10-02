@@ -19,7 +19,7 @@ public class InventarioClient {
     private final RestClient restClient;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public InventarioClient(ApiProperties apiProperties, TokenForwardingInterceptor interceptor) {
+    public InventarioClient(ApiProperties apiProperties, ServiceTokenInterceptor interceptor) {
         this.restClient = RestClient.builder()
                 .baseUrl(apiProperties.getInventario().getUrl())
                 .requestInterceptor(interceptor)

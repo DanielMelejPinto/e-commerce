@@ -69,4 +69,9 @@ req $BASE/api/inventarios/producto/$PID -H "Authorization: Bearer $AT"
 check "stock liberado" "$(field cantidadDisponible)" 50
 check "reservado en 0" "$(field cantidadReservada)" 0
 
+req -X PUT $BASE/api/inventarios/producto/$PID/reservar -H "Authorization: Bearer $UT" -H "$J" -d '{"cantidad":1}'
+check "usuario normal no puede reservar" "$STATUS" 403
+req -X PUT $BASE/api/inventarios/producto/$PID/liberar -H "Authorization: Bearer $UT" -H "$J" -d '{"cantidad":1}'
+check "usuario normal no puede liberar" "$STATUS" 403
+
 [ $FAIL -eq 0 ] && echo "TODO OK" || echo "HAY FALLAS"
