@@ -3,7 +3,7 @@ services:
     image: postgres:17-alpine
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-ecommerce_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ecommerce_pass}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?define POSTGRES_PASSWORD en .env}
       POSTGRES_DB: postgres
     ports:
       - "5432:5432"
@@ -73,7 +73,7 @@ services:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/usuario_db
       - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER:-ecommerce_user}
-      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD:-ecommerce_pass}
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD:?define POSTGRES_PASSWORD en .env}
       - JWT_SECRET=${JWT_SECRET}
       - ADMIN_EMAIL=${ADMIN_EMAIL}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD}
@@ -91,7 +91,7 @@ services:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/producto_db
       - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER:-ecommerce_user}
-      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD:-ecommerce_pass}
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD:?define POSTGRES_PASSWORD en .env}
       - JWT_SECRET=${JWT_SECRET}
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
     depends_on:
@@ -110,7 +110,7 @@ services:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/inventario_db
       - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER:-ecommerce_user}
-      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD:-ecommerce_pass}
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD:?define POSTGRES_PASSWORD en .env}
       - JWT_SECRET=${JWT_SECRET}
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
     depends_on:
@@ -129,7 +129,7 @@ services:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/pedido_db
       - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER:-ecommerce_user}
-      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD:-ecommerce_pass}
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD:?define POSTGRES_PASSWORD en .env}
       - JWT_SECRET=${JWT_SECRET}
       - PRODUCTO_URL=http://producto-api:8080/api/productos
       - INVENTARIO_URL=http://inventario-api:8081/api/inventarios
