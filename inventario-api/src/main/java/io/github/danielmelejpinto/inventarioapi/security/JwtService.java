@@ -14,12 +14,9 @@ import java.util.Date;
 public class JwtService {
 
     private final SecretKey secretKey;
-    private final long jwtExpirationMs;
 
-    public JwtService(@Value("${seguridad.jwt.secret}") String secret,
-                      @Value("${seguridad.jwt.expiration-ms:86400000}") long jwtExpirationMs) {
+    public JwtService(@Value("${seguridad.jwt.secret}") String secret) {
         this.secretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
-        this.jwtExpirationMs = jwtExpirationMs;
     }
 
 

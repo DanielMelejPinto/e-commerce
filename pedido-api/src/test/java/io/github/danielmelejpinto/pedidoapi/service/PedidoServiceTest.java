@@ -110,9 +110,7 @@ class PedidoServiceTest {
     void crearPedido_idempotenciaYaExistePeroParaOtroUsuario_creaNuevoPedido() {
         // Arrange
         String idempotencyKey = "test-uuid";
-        Long usuarioId1 = 1L; // El dueño original
         Long usuarioId2 = 2L; // El nuevo atacante o reintento erróneo
-        Long pedidoIdExistente = 55L;
         
         PedidoItemRequest itemRequest = new PedidoItemRequest(10L, 1);
         PedidoRequest request = new PedidoRequest(List.of(itemRequest));
