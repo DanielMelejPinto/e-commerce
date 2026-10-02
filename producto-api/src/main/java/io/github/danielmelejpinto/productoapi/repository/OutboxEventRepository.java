@@ -12,6 +12,6 @@ import io.github.danielmelejpinto.productoapi.model.OutboxEvent;
 
 public interface OutboxEventRepository extends JpaRepository<OutboxEvent, Long> {
     
-    @Query("SELECT o FROM OutboxEvent o WHERE o.estado = :estado AND (o.proximoReintento IS NULL OR o.proximoReintento <= :now)")
-    List<OutboxEvent> findPendingEvents(@Param("estado") EstadoEvento estado, @Param("now") LocalDateTime now);
+    @Query("SELECT o FROM OutboxEvent o WHERE o.estado = :estado AND (o.proximoReintento IS NULL OR o.proximoReintento <= :now) ORDER BY o.id ASC")
+    List<OutboxEvent> findPendingEvents(@Param("estado") EstadoEvento estado, @Param("now") LocalDateTime now, org.springframework.data.domain.Pageable pageable);
 }

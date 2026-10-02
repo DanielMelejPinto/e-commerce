@@ -48,7 +48,7 @@ public class OutboxProcessor {
     @Scheduled(fixedDelayString = "${outbox.poll-interval-ms:5000}")
     @SchedulerLock(name = "procesarEventosPendientesTask", lockAtLeastFor = "${outbox.lock-min:PT4S}", lockAtMostFor = "${outbox.lock-max:PT14M}")
     public void procesarEventosPendientes() {
-        List<OutboxEvent> pendientes = eventRepository.findPendingEvents(EstadoEvento.PENDIENTE, LocalDateTime.now());
+        List<OutboxEvent> pendientes = eventRepository.findPendingEvents(EstadoEvento.PENDIENTE, LocalDateTime.now(), org.springframework.data.domain.PageRequest.of(0, 50));
         
         for (OutboxEvent event : pendientes) {
             Producto producto = productoRepository.findById(event.getProductoId()).orElse(null);
@@ -100,6 +100,17 @@ public class OutboxProcessor {
                 }
                 eventRepository.save(event);
             }
+        }
+    }
+
+    public void reintentarEventosFallidos() {
+        List<OutboxEvent> errores = eventRepository.findPendingEvents(EstadoEvento.ERROR, LocalDateTime.now(), org.springframework.data.domain.PageRequest.of(0, 100));
+        for (OutboxEvent event : errores) {
+            event.setEstado(EstadoEvento.PENDIENTE);
+            event.setIntentos(0);
+            event.setProximoReintento(null);
+            eventRepository.save(event);
+            log.info("Evento fallido {} marcado para reintento manual", event.getId());
         }
     }
 }

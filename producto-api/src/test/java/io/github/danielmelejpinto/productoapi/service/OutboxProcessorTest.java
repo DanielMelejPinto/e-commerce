@@ -72,7 +72,7 @@ class OutboxProcessorTest {
         producto.setId(10L);
         producto.setEstado(EstadoProducto.BAJA);
 
-        when(eventRepository.findPendingEvents(any(), any())).thenReturn(List.of(event));
+        when(eventRepository.findPendingEvents(any(), any(), any())).thenReturn(List.of(event));
         when(productoRepository.findById(10L)).thenReturn(Optional.of(producto));
 
         processor.procesarEventosPendientes();
@@ -98,7 +98,7 @@ class OutboxProcessorTest {
         producto.setId(10L);
         producto.setEstado(EstadoProducto.PENDIENTE);
 
-        when(eventRepository.findPendingEvents(any(), any())).thenReturn(List.of(event));
+        when(eventRepository.findPendingEvents(any(), any(), any())).thenReturn(List.of(event));
         when(productoRepository.findById(10L)).thenReturn(Optional.of(producto));
 
         processor.procesarEventosPendientes();
@@ -122,7 +122,7 @@ class OutboxProcessorTest {
         producto.setId(10L);
         producto.setEstado(EstadoProducto.PENDIENTE);
 
-        when(eventRepository.findPendingEvents(any(), any())).thenReturn(List.of(event));
+        when(eventRepository.findPendingEvents(any(), any(), any())).thenReturn(List.of(event));
         when(productoRepository.findById(10L)).thenReturn(Optional.of(producto));
         when(kafkaTemplate.send(any(), any(), any()))
                 .thenReturn(java.util.concurrent.CompletableFuture.failedFuture(new RuntimeException("broker rechazo")));
@@ -147,7 +147,7 @@ class OutboxProcessorTest {
         producto.setId(10L);
         producto.setEstado(EstadoProducto.PENDIENTE);
 
-        when(eventRepository.findPendingEvents(any(), any())).thenReturn(List.of(event));
+        when(eventRepository.findPendingEvents(any(), any(), any())).thenReturn(List.of(event));
         when(productoRepository.findById(10L)).thenReturn(Optional.of(producto));
         doThrow(new RuntimeException("Kafka down")).when(kafkaTemplate).send(any(), any(), any());
 
@@ -172,7 +172,7 @@ class OutboxProcessorTest {
         producto.setId(10L);
         producto.setEstado(EstadoProducto.PENDIENTE);
 
-        when(eventRepository.findPendingEvents(any(), any())).thenReturn(List.of(event));
+        when(eventRepository.findPendingEvents(any(), any(), any())).thenReturn(List.of(event));
         when(productoRepository.findById(10L)).thenReturn(Optional.of(producto));
         doThrow(new RuntimeException("Kafka down")).when(kafkaTemplate).send(any(), any(), any());
 

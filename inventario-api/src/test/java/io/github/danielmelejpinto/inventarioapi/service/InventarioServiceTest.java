@@ -179,7 +179,7 @@ class InventarioServiceTest {
         when(repository.reservarStockAtomico(productoId, 5)).thenReturn(1);
         when(repository.findByProductoId(productoId)).thenReturn(Optional.of(inventario));
 
-        InventarioResponse response = service.reservarStock(productoId, 5);
+        InventarioResponse response = service.reservarStock(productoId, 5, 99L);
 
         assertThat(response.cantidadDisponible()).isEqualTo(5L);
         assertThat(response.cantidadReservada()).isEqualTo(5L);
@@ -196,7 +196,7 @@ class InventarioServiceTest {
         when(repository.reservarStockAtomico(productoId, 10)).thenReturn(1);
         when(repository.findByProductoId(productoId)).thenReturn(Optional.of(inventario));
 
-        InventarioResponse response = service.reservarStock(productoId, 10);
+        InventarioResponse response = service.reservarStock(productoId, 10, 99L);
 
         assertThat(response.cantidadDisponible()).isZero();
         assertThat(response.cantidadReservada()).isEqualTo(10L);
@@ -213,7 +213,7 @@ class InventarioServiceTest {
         when(repository.reservarStockAtomico(productoId, 10)).thenReturn(0);
         when(repository.findByProductoId(productoId)).thenReturn(Optional.of(inventario));
 
-        assertThatThrownBy(() -> service.reservarStock(productoId, 10))
+        assertThatThrownBy(() -> service.reservarStock(productoId, 10, 99L))
                 .isInstanceOf(StockInsuficienteException.class)
                 .hasMessageContaining("disponible 5, solicitado 10");
     }
@@ -224,7 +224,7 @@ class InventarioServiceTest {
         when(repository.reservarStockAtomico(productoId, 5)).thenReturn(0);
         when(repository.findByProductoId(productoId)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.reservarStock(productoId, 5))
+        assertThatThrownBy(() -> service.reservarStock(productoId, 5, 99L))
                 .isInstanceOf(InventarioNoEncontradoException.class);
     }
 

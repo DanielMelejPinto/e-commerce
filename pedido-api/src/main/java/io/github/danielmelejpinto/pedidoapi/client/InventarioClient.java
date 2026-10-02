@@ -20,17 +20,22 @@ public class InventarioClient {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public InventarioClient(ApiProperties apiProperties, ServiceTokenInterceptor interceptor) {
+        org.springframework.http.client.SimpleClientHttpRequestFactory factory = new org.springframework.http.client.SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(3000);
+        factory.setReadTimeout(10000);
+
         this.restClient = RestClient.builder()
                 .baseUrl(apiProperties.getInventario().getUrl())
                 .requestInterceptor(interceptor)
+                .requestFactory(factory)
                 .build();
     }
 
     @CircuitBreaker(name = "inventario", fallbackMethod = "fallbackReservarStock")
-    public void reservarStock(Long productoId, Integer cantidad) {
+    public void reservarStock(Long productoId, Integer cantidad, Long pedidoId) {
         restClient.put()
                 .uri("/producto/{productoId}/reservar", productoId)
-                .body(new ReservaRequest(cantidad))
+                .body(new ReservaRequest(cantidad, pedidoId))
                 .retrieve()
                 .onStatus(status -> status.is4xxClientError(), (request, response) -> {
                     if (response.getStatusCode().value() == 409) {
@@ -51,11 +56,11 @@ public class InventarioClient {
                 .toBodilessEntity();
     }
 
-    @CircuitBreaker(name = "inventario", fallbackMethod = "fallbackLiberarStock")
-    public void liberarStock(Long productoId, Integer cantidad) {
+    @CircuitBreaker(name = "inventario-liberar", fallbackMethod = "fallbackLiberarStock")
+    public void liberarStock(Long productoId, Integer cantidad, Long pedidoId) {
         restClient.put()
                 .uri("/producto/{productoId}/liberar", productoId)
-                .body(new ReservaRequest(cantidad))
+                .body(new ReservaRequest(cantidad, pedidoId))
                 .retrieve()
                 .onStatus(status -> status.is4xxClientError(), (request, response) -> {
                     throw new DependenciaClienteException("Error de cliente en inventario (liberar): " + response.getStatusCode(), response.getStatusCode());
@@ -66,14 +71,14 @@ public class InventarioClient {
                 .toBodilessEntity();
     }
 
-    public void fallbackReservarStock(Long productoId, Integer cantidad, Throwable t) {
+    public void fallbackReservarStock(Long productoId, Integer cantidad, Long pedidoId, Throwable t) {
         if (t instanceof StockInsuficienteException || t instanceof DependenciaClienteException) {
             throw (RuntimeException) t; // errores de negocio/cliente: no son "servicio caído"
         }
         throw new ServicioDependienteException("El servicio de inventario está inactivo. Fallback activado (Circuit Breaker).");
     }
 
-    public void fallbackLiberarStock(Long productoId, Integer cantidad, Throwable t) {
+    public void fallbackLiberarStock(Long productoId, Integer cantidad, Long pedidoId, Throwable t) {
         if (t instanceof DependenciaClienteException) {
             throw (RuntimeException) t;
         }

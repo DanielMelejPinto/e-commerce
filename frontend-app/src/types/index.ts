@@ -8,8 +8,8 @@ export interface Producto {
 
 export interface Inventario {
   productoId: number;
-  stockDisponible: number;
-  stockReservado: number;
+  cantidadDisponible: number;
+  cantidadReservada: number;
 }
 
 export interface Usuario {

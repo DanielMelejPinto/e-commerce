@@ -75,6 +75,22 @@ public class ProductoService {
         return pagina.map(this::mapearAResponse);
     }
 
+    public Page<ProductoResponse> obtenerTodosAdmin(String nombre, Pageable pageable) {
+        validarOrdenamiento(pageable.getSort());
+        
+        Sort sort = pageable.getSort().and(Sort.by(ID_FIELD));
+        Pageable pageableConId = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
+        
+        Page<Producto> pagina;
+        if (nombre != null && !nombre.isBlank()) {
+            pagina = repository.findByNombreContainingIgnoreCase(nombre.trim(), pageableConId);
+        } else {
+            pagina = repository.findAll(pageableConId);
+        }
+        
+        return pagina.map(this::mapearAResponse);
+    }
+
     public ProductoResponse obtenerPorId(Long id) {
         return mapearAResponse(buscarEntidadPorId(id));
     }

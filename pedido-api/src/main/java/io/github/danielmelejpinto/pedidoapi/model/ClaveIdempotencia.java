@@ -20,6 +20,12 @@ public class ClaveIdempotencia {
     @Column(nullable = false)
     private LocalDateTime fechaCreacion;
 
+    @Column(name = "hash_contenido", nullable = false)
+    private String hashContenido;
+
+    @Column(name = "estado", nullable = false)
+    private String estado;
+
     @PrePersist
     protected void onCreate() {
         this.fechaCreacion = LocalDateTime.now();
@@ -27,10 +33,12 @@ public class ClaveIdempotencia {
 
     public ClaveIdempotencia() {}
 
-    public ClaveIdempotencia(Long usuarioId, String clave, Long pedidoId) {
+    public ClaveIdempotencia(Long usuarioId, String clave, Long pedidoId, String hashContenido, String estado) {
         this.usuarioId = usuarioId;
         this.clave = clave;
         this.pedidoId = pedidoId;
+        this.hashContenido = hashContenido;
+        this.estado = estado;
     }
 
     public Long getUsuarioId() { return usuarioId; }
@@ -44,4 +52,10 @@ public class ClaveIdempotencia {
 
     public LocalDateTime getFechaCreacion() { return fechaCreacion; }
     public void setFechaCreacion(LocalDateTime fechaCreacion) { this.fechaCreacion = fechaCreacion; }
+
+    public String getHashContenido() { return hashContenido; }
+    public void setHashContenido(String hashContenido) { this.hashContenido = hashContenido; }
+
+    public String getEstado() { return estado; }
+    public void setEstado(String estado) { this.estado = estado; }
 }

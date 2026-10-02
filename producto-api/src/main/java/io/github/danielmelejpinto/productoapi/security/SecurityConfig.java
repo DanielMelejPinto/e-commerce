@@ -39,6 +39,8 @@ public class SecurityConfig {
                 // IMPORTANTE: "/error" debe seguir en permitAll. El reenvío interno a /error llega como
                 // anónimo; si no está permitido, el 403 por rol, el 404 y el 405 salen como 401.
                 auth.requestMatchers("/actuator/**", "/error").permitAll()
+                    .requestMatchers(HttpMethod.POST, "/api/productos/historial").authenticated()
+                    .requestMatchers(HttpMethod.GET, "/api/productos/admin").hasRole("ADMIN")
                     .requestMatchers(HttpMethod.GET, "/api/productos/**").permitAll();
                     
                 if (apiDocsEnabled) {

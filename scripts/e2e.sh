@@ -1,9 +1,27 @@
+#!/bin/bash
+set -e
+
+if [ ! -f ".env" ]; then
+  echo "Error: Falta el archivo .env"
+  exit 1
+fi
+
+if ! command -v curl >/dev/null 2>&1; then
+  echo "Error: curl no está instalado"
+  exit 1
+fi
+
+if ! command -v python3 >/dev/null 2>&1; then
+  echo "Error: python3 no está instalado"
+  exit 1
+fi
+
 cd "$(dirname "$0")/.." && set -a && source .env && set +a
 BASE=http://localhost:5173
 J='Content-Type: application/json'
 FAIL=0
 
-req()   { RESP=$(curl -s -w $'\n%{http_code}' "$@"); STATUS=${RESP##*$'\n'}; BODY=${RESP%$'\n'*}; }
+req()   { RESP=$(curl --max-time 10 --connect-timeout 5 -s -w $'\n%{http_code}' "$@" || true); STATUS=${RESP##*$'\n'}; BODY=${RESP%$'\n'*}; }
 field() { echo "$BODY" | python3 -c "import json,sys;print(json.load(sys.stdin).get('$1',''))" 2>/dev/null; }
 check() { if [ "$2" = "$3" ]; then echo "OK    $1"; else echo "FALLA $1 (esperado $3, obtuvo '$2')"; echo "      status: $STATUS cuerpo: $(echo "$BODY" | head -c 300)"; FAIL=1; fi; }
 jbody() { python3 -c "import json,os,sys;print(json.dumps(dict(a.split('=',1) for a in sys.argv[1:])))" "$@"; }
@@ -69,9 +87,15 @@ req $BASE/api/inventarios/producto/$PID -H "Authorization: Bearer $AT"
 check "stock liberado" "$(field cantidadDisponible)" 50
 check "reservado en 0" "$(field cantidadReservada)" 0
 
-req -X PUT $BASE/api/inventarios/producto/$PID/reservar -H "Authorization: Bearer $UT" -H "$J" -d '{"cantidad":1}'
+req -X PUT $BASE/api/inventarios/producto/$PID/reservar -H "Authorization: Bearer $UT" -H "$J" -d "{\"cantidad\":1,\"pedidoId\":123}"
 check "usuario normal no puede reservar" "$STATUS" 403
-req -X PUT $BASE/api/inventarios/producto/$PID/liberar -H "Authorization: Bearer $UT" -H "$J" -d '{"cantidad":1}'
+req -X PUT $BASE/api/inventarios/producto/$PID/liberar -H "Authorization: Bearer $UT" -H "$J" -d "{\"cantidad\":1,\"pedidoId\":123}"
 check "usuario normal no puede liberar" "$STATUS" 403
 
-[ $FAIL -eq 0 ] && echo "TODO OK" || echo "HAY FALLAS"
+if [ $FAIL -eq 0 ]; then
+  echo "TODO OK"
+  exit 0
+else
+  echo "HAY FALLAS"
+  exit 1
+fi

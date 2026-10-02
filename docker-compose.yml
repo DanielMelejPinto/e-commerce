@@ -39,6 +39,15 @@ services:
       KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
       KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
       CLUSTER_ID: 'MkU3OEVBNTcwNTJENDM2Qk'
+      KAFKA_LOG_DIRS: '/tmp/kraft-combined-logs'
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    volumes:
+      - kafka_data:/tmp/kraft-combined-logs
 
 
   gateway-api:
@@ -98,12 +107,13 @@ services:
       postgres:
         condition: service_healthy
       kafka:
-        condition: service_started
+        condition: service_healthy
 
   inventario-api:
     build:
       context: ./inventario-api
       dockerfile: Dockerfile
+    restart: on-failure
     ports:
       - "8081:8081"
     environment:
@@ -117,7 +127,7 @@ services:
       postgres:
         condition: service_healthy
       kafka:
-        condition: service_started
+        condition: service_healthy
 
   pedido-api:
     build:
@@ -150,3 +160,4 @@ services:
 
 volumes:
   pgdata:
+  kafka_data:

@@ -13,26 +13,25 @@ import io.github.danielmelejpinto.inventarioapi.exception.InventarioNoEncontrado
 import io.github.danielmelejpinto.inventarioapi.exception.StockInsuficienteException;
 import io.github.danielmelejpinto.inventarioapi.model.Inventario;
 import io.github.danielmelejpinto.inventarioapi.repository.InventarioRepository;
+import io.github.danielmelejpinto.inventarioapi.repository.ReservaRepository;
+import io.github.danielmelejpinto.inventarioapi.model.Reserva;
 
 @Service
 @Transactional(readOnly = true)
 public class InventarioService {
 
     private final InventarioRepository repository;
+    private final ReservaRepository reservaRepository;
 
-    public InventarioService(InventarioRepository repository) {
+    public InventarioService(InventarioRepository repository, ReservaRepository reservaRepository) {
         this.repository = repository;
+        this.reservaRepository = reservaRepository;
     }
 
     public InventarioResponse obtenerPorProductoId(Long productoId) {
         return mapearAResponse(buscar(productoId));
     }
 
-    // propagation = NEVER evita que este método corra dentro de una transacción
-    // activa. Esto nos permite capturar el DataIntegrityViolationException de
-    // Hibernate sin que la transacción superior se marque irremediablemente como
-    // rollback-only, logrando así un insert seguro y verdaderamente idempotente
-    // ante hilos concurrentes.
     @Transactional(propagation = Propagation.NEVER)
     public ResultadoInicializacion inicializarInventario(Long productoId) {
         return repository.findByProductoId(productoId)
@@ -42,8 +41,6 @@ public class InventarioService {
                         Inventario nuevo = repository.save(crearVacio(productoId));
                         return new ResultadoInicializacion(mapearAResponse(nuevo), true);
                     } catch (DataIntegrityViolationException e) {
-                        // Otro hilo o proceso ganó la carrera y lo creó primero.
-                        // Volvemos a buscarlo (ya debería estar)
                         Inventario existente = repository.findByProductoId(productoId)
                                 .orElseThrow(() -> new IllegalStateException(
                                         "Se esperaba encontrar el inventario tras colisión, pero no está", e));
@@ -52,8 +49,6 @@ public class InventarioService {
                 });
     }
 
-    // No hace falta repository.save(): la entidad está gestionada por JPA y se
-    // persiste al cerrar la transacción (con la comprobación de @Version)
     @Transactional
     public InventarioResponse agregarStock(Long productoId, int cantidad) {
         Inventario inventario = buscar(productoId);
@@ -63,18 +58,27 @@ public class InventarioService {
     }
 
     @Transactional
-    public InventarioResponse reservarStock(Long productoId, int cantidad) {
+    public InventarioResponse reservarStock(Long productoId, int cantidad, Long pedidoId) {
+        if (reservaRepository.findByPedidoIdAndProductoId(pedidoId, productoId).isPresent()) {
+            return mapearAResponse(buscar(productoId));
+        }
+
         int filasActualizadas = repository.reservarStockAtomico(productoId, cantidad);
         if (filasActualizadas == 0) {
-            // No se actualizó: o no existe o no hay stock
-            Inventario inventario = buscar(productoId); // si no existe lanza InventarioNoEncontradoException
+            Inventario inventario = buscar(productoId);
             throw new StockInsuficienteException(productoId, inventario.getCantidadDisponible(), cantidad);
         }
+
+        reservaRepository.save(new Reserva(pedidoId, productoId, cantidad));
         return mapearAResponse(buscar(productoId));
     }
 
     @Transactional
     public void eliminarInventario(Long productoId) {
+        Inventario inventario = buscar(productoId);
+        if (inventario.getCantidadReservada() > 0) {
+            throw new IllegalStateException("No se puede eliminar el inventario porque tiene reservas activas");
+        }
         repository.findByProductoId(productoId).ifPresent(repository::delete);
     }
 
@@ -101,9 +105,22 @@ public class InventarioService {
     }
 
     @Transactional
-    public InventarioResponse liberarStock(Long productoId, int cantidad) {
-        repository.liberarStockAtomico(productoId, cantidad);
-        // Retornamos el estado actualizado
+    public InventarioResponse liberarStock(Long productoId, int cantidad, Long pedidoId) {
+        var reservaOpt = reservaRepository.findByPedidoIdAndProductoId(pedidoId, productoId);
+        if (reservaOpt.isEmpty()) {
+            throw new IllegalStateException("No existe la reserva para el pedido y producto indicados");
+        }
+        
+        Reserva reserva = reservaOpt.get();
+        if ("LIBERADA".equals(reserva.getEstado())) {
+            // Ya fue liberada: es idempotente
+            return mapearAResponse(buscar(productoId));
+        }
+
+        reserva.setEstado("LIBERADA");
+        reservaRepository.save(reserva);
+        repository.liberarStockAtomico(productoId, reserva.getCantidad());
+        
         return mapearAResponse(buscar(productoId));
     }
 }

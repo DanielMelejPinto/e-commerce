@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { usuarioService } from '../../services/usuarioService';
-import styles from './Login.module.css'; // Reusamos los estilos de Login
+import { extractErrorMessage } from '../../utils/errorHelper';
+import styles from './Login.module.css';
 
 const Register = () => {
   const [nombre, setNombre] = useState('');
@@ -15,8 +16,15 @@ const Register = () => {
     e.preventDefault();
     setError('');
     
-    if (password.length < 6) {
-      setError('La contraseña debe tener al menos 6 caracteres');
+    if (password.length < 8 || password.length > 72) {
+      setError('La contraseña debe tener entre 8 y 72 caracteres');
+      return;
+    }
+    
+    // Check byte size for BCrypt limitation (72 bytes)
+    const byteSize = new Blob([password]).size;
+    if (byteSize > 72) {
+      setError('La contraseña excede el límite máximo de 72 bytes permitido');
       return;
     }
 
@@ -26,12 +34,7 @@ const Register = () => {
       // Registro exitoso, redirigimos a login
       navigate('/login?registrado=true');
     } catch (err: unknown) {
-      if (typeof err === 'object' && err !== null && 'response' in err) {
-        const error = err as { response?: { data?: { message?: string } } };
-        setError(error.response?.data?.message || 'Error al registrar el usuario');
-      } else {
-        setError('Error al registrar el usuario');
-      }
+      setError(extractErrorMessage(err, 'Error al registrar el usuario'));
     } finally {
       setLoading(false);
     }

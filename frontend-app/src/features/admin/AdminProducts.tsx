@@ -8,6 +8,9 @@ const AdminProducts = () => {
   const [products, setProducts] = useState<Producto[]>([]);
   const [inventories, setInventories] = useState<Record<number, Inventario>>({});
   const [loading, setLoading] = useState(true);
+  
+  const [page, setPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
 
   // Form states for new product
   const [showForm, setShowForm] = useState(false);
@@ -19,10 +22,12 @@ const AdminProducts = () => {
   // Stock management state
   const [stockAdd, setStockAdd] = useState<Record<number, string>>({});
 
-  const fetchProducts = async () => {
+  const fetchProducts = async (currentPage = 0) => {
     try {
-      const prodList = await productoService.obtenerTodos();
+      const prodList = await productoService.obtenerTodosAdmin(currentPage, 10);
       setProducts(prodList.content);
+      setTotalPages(prodList.page.totalPages);
+      setPage(currentPage);
       
       // Fetch inventory for each product
       const invData: Record<number, Inventario> = {};
@@ -56,11 +61,16 @@ const AdminProducts = () => {
   };
 
   useEffect(() => {
-    fetchProducts();
+    fetchProducts(0);
   }, []);
+
+  const [creating, setCreating] = useState(false);
+  const [updatingStock, setUpdatingStock] = useState<number | null>(null);
 
   const handleCreateProduct = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (creating) return;
+    setCreating(true);
     try {
       await productoService.crear({
         nombre,
@@ -71,23 +81,28 @@ const AdminProducts = () => {
       // Reset
       setShowForm(false);
       setNombre(''); setDescripcion(''); setPrecio(''); setImagenUrl('');
-      fetchProducts();
+      fetchProducts(page);
     } catch (err) {
       console.error(err);
       alert('Error creando producto');
+    } finally {
+      setCreating(false);
     }
   };
 
   const handleAddStock = async (productoId: number) => {
     const qty = parseInt(stockAdd[productoId] || '0');
-    if (qty <= 0) return;
+    if (qty <= 0 || updatingStock === productoId) return;
+    setUpdatingStock(productoId);
     try {
       await inventarioService.agregarStock(productoId, qty);
       setStockAdd({ ...stockAdd, [productoId]: '' });
-      fetchProducts();
+      fetchProducts(page);
     } catch (err) {
       console.error(err);
       alert('Error agregando stock');
+    } finally {
+      setUpdatingStock(null);
     }
   };
 
@@ -123,7 +138,9 @@ const AdminProducts = () => {
               <textarea id="descripcion" value={descripcion} onChange={e => setDescripcion(e.target.value)} />
             </div>
           </div>
-          <button type="submit" className={styles.successButton}>Guardar Producto</button>
+          <button type="submit" disabled={creating} className={styles.successButton}>
+            {creating ? 'Guardando...' : 'Guardar Producto'}
+          </button>
         </form>
       )}
 
@@ -147,12 +164,12 @@ const AdminProducts = () => {
               <td>${p.precio.toFixed(2)}</td>
               <td>
                 <span className={styles.badgeSuccess}>
-                  {inventories[p.id]?.stockDisponible ?? 0}
+                  {inventories[p.id]?.cantidadDisponible ?? 0}
                 </span>
               </td>
               <td>
                 <span className={styles.badgeWarning}>
-                  {inventories[p.id]?.stockReservado ?? 0}
+                  {inventories[p.id]?.cantidadReservada ?? 0}
                 </span>
               </td>
               <td>
@@ -165,14 +182,15 @@ const AdminProducts = () => {
                     onChange={e => setStockAdd({ ...stockAdd, [p.id]: e.target.value })}
                     className={styles.stockInput}
                     aria-label={`Cantidad a añadir al stock de ${p.nombre}`}
+                    disabled={updatingStock === p.id}
                   />
                   <button 
                     onClick={() => handleAddStock(p.id)}
                     className={styles.secondaryButton}
-                    disabled={!stockAdd[p.id]}
+                    disabled={!stockAdd[p.id] || updatingStock === p.id}
                     aria-label={`Ingresar stock para ${p.nombre}`}
                   >
-                    Ingresar
+                    {updatingStock === p.id ? '...' : 'Ingresar'}
                   </button>
                 </div>
               </td>
@@ -180,6 +198,11 @@ const AdminProducts = () => {
           ))}
         </tbody>
       </table>
+      <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+        <button disabled={page === 0} onClick={() => fetchProducts(page - 1)} className={styles.secondaryButton}>Anterior</button>
+        <span>Página {page + 1} de {totalPages || 1}</span>
+        <button disabled={page >= totalPages - 1} onClick={() => fetchProducts(page + 1)} className={styles.secondaryButton}>Siguiente</button>
+      </div>
     </main>
   );
 };

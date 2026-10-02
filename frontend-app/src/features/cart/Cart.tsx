@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { pedidoService } from '../../services/pedidoService';
 import { Trash2, CheckCircle } from 'lucide-react';
 import styles from './Cart.module.css';
+import { extractErrorMessage } from '../../utils/errorHelper';
 
 const Cart = () => {
   const { items, updateQuantity, removeFromCart, clearCart, getTotal } = useCartStore();
@@ -43,9 +44,9 @@ const Cart = () => {
       console.error(err);
       if (typeof err === 'object' && err !== null && 'response' in err) {
         const error = err as { response?: { data?: { message?: string } } };
-        setError(error.response?.data?.message || 'Error al procesar el pedido. Verifica el stock.');
+        setError(extractErrorMessage(error, 'Error al procesar el pedido. Verifica el stock.'));
       } else {
-        setError('Error al procesar el pedido. Verifica el stock.');
+        setError(extractErrorMessage(error, 'Error al procesar el pedido. Verifica el stock.'));
       }
     } finally {
       setLoading(false);

@@ -1,0 +1,2 @@
+ALTER TABLE pedidos ALTER COLUMN total TYPE NUMERIC(19, 2);
+ALTER TABLE pedido_items ALTER COLUMN precio_unitario TYPE NUMERIC(19, 2);

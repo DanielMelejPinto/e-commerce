@@ -13,9 +13,14 @@ public class ProductoClient {
     private final RestClient restClient;
 
     public ProductoClient(ApiProperties apiProperties, TokenForwardingInterceptor interceptor) {
+        org.springframework.http.client.SimpleClientHttpRequestFactory factory = new org.springframework.http.client.SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(3000);
+        factory.setReadTimeout(10000);
+        
         this.restClient = RestClient.builder()
                 .baseUrl(apiProperties.getProducto().getUrl())
                 .requestInterceptor(interceptor)
+                .requestFactory(factory)
                 .build();
     }
 

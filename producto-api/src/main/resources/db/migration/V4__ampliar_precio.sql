@@ -1,0 +1,1 @@
+ALTER TABLE producto ALTER COLUMN precio TYPE NUMERIC(19, 2);
