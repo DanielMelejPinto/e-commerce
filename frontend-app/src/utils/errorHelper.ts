@@ -1,6 +1,13 @@
+import axios from "axios";
 export const extractErrorMessage = (err: unknown, defaultMessage = 'Error inesperado'): string => {
   if (typeof err === 'object' && err !== null && 'response' in err) {
-    const response = (err as any).response;
+    
+    if (!axios.isAxiosError(err)) {
+      if (err instanceof Error) return err.message;
+      return defaultMessage;
+    }
+    const response = err.response;
+
     if (response?.data) {
       if (typeof response.data === 'string') {
         return response.data;

@@ -16,8 +16,15 @@ const Register = () => {
     e.preventDefault();
     setError('');
     
-    if (password.length < 8) {
-      setError('La contraseña debe tener al menos 8 caracteres');
+    if (password.length < 8 || password.length > 72) {
+      setError('La contraseña debe tener entre 8 y 72 caracteres');
+      return;
+    }
+    
+    // Check byte size for BCrypt limitation (72 bytes)
+    const byteSize = new Blob([password]).size;
+    if (byteSize > 72) {
+      setError('La contraseña excede el límite máximo de 72 bytes permitido');
       return;
     }
 

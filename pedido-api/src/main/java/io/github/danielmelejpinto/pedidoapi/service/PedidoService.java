@@ -11,6 +11,7 @@ import io.github.danielmelejpinto.pedidoapi.repository.PedidoRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.context.ApplicationContext;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -29,13 +30,15 @@ public class PedidoService {
     private final ProductoClient productoClient;
     private final InventarioClient inventarioClient;
     private final io.github.danielmelejpinto.pedidoapi.repository.ClaveIdempotenciaRepository claveIdempotenciaRepository;
+    private final ApplicationContext context;
 
     public PedidoService(PedidoRepository pedidoRepository, ProductoClient productoClient,
-            InventarioClient inventarioClient, io.github.danielmelejpinto.pedidoapi.repository.ClaveIdempotenciaRepository claveIdempotenciaRepository) {
+            InventarioClient inventarioClient, io.github.danielmelejpinto.pedidoapi.repository.ClaveIdempotenciaRepository claveIdempotenciaRepository, ApplicationContext context) {
         this.pedidoRepository = pedidoRepository;
         this.productoClient = productoClient;
         this.inventarioClient = inventarioClient;
         this.claveIdempotenciaRepository = claveIdempotenciaRepository;
+        this.context = context;
     }
 
     private String generarHash(PedidoRequest request) {
@@ -111,7 +114,7 @@ public class PedidoService {
 
         Pedido pedido;
         try {
-            pedido = iniciarPedidoAtomico(usuarioId, request, idempotencyKey, hash);
+            pedido = context.getBean(PedidoService.class).iniciarPedidoAtomico(usuarioId, request, idempotencyKey, hash);
         } catch (DataIntegrityViolationException e) {
             // Concurrencia al crear la clave de idempotencia
             return crearPedido(usuarioId, request, idempotencyKey); // reintento
