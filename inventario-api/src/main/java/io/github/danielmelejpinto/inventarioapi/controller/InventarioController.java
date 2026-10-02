@@ -68,12 +68,12 @@ public class InventarioController {
     @PutMapping("/reservar")
     @Operation(summary = "Reservar stock para una compra")
     @ApiResponse(responseCode = "200", description = "Stock reservado")
-    @ApiResponse(responseCode = "400", description = "Cantidad inválida")
+    @ApiResponse(responseCode = "400", description = "Cantidad inválida o falta pedidoId")
     @ApiResponse(responseCode = "404", description = "El producto no tiene inventario")
     @ApiResponse(responseCode = "409", description = "Stock insuficiente o conflicto de concurrencia")
     public InventarioResponse reservar(@PathVariable Long productoId,
-            @Valid @RequestBody CantidadRequest request) {
-        return service.reservarStock(productoId, request.cantidad());
+            @Valid @RequestBody io.github.danielmelejpinto.inventarioapi.dto.ReservaRequest request) {
+        return service.reservarStock(productoId, request.cantidad(), request.pedidoId());
     }
 
     @DeleteMapping
@@ -87,7 +87,7 @@ public class InventarioController {
     @PutMapping("/liberar")
     @Operation(summary = "Liberar stock reservado (compensación)")
     public InventarioResponse liberar(@PathVariable Long productoId,
-            @Valid @RequestBody CantidadRequest request) {
-        return service.liberarStock(productoId, request.cantidad());
+            @Valid @RequestBody io.github.danielmelejpinto.inventarioapi.dto.ReservaRequest request) {
+        return service.liberarStock(productoId, request.cantidad(), request.pedidoId());
     }
 }

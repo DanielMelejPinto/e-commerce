@@ -54,7 +54,7 @@ class PedidoServiceTest {
         ProductoDTO productoDTO = new ProductoDTO(productoId, "Producto Test", precio, "ACTIVO");
 
         when(productoClient.obtenerProducto(productoId)).thenReturn(productoDTO);
-        doNothing().when(inventarioClient).reservarStock(productoId, cantidad);
+        doNothing().when(inventarioClient).reservarStock(productoId, cantidad, null);
         
         when(pedidoRepository.saveAndFlush(any(Pedido.class))).thenAnswer(invocation -> {
             Pedido p = invocation.getArgument(0);
@@ -73,7 +73,7 @@ class PedidoServiceTest {
         assertEquals(1, pedidoCreado.getItems().size());
         
         verify(productoClient, times(1)).obtenerProducto(productoId);
-        verify(inventarioClient, times(1)).reservarStock(productoId, cantidad);
+        verify(inventarioClient, times(1)).reservarStock(productoId, cantidad, null);
         verify(pedidoRepository, times(1)).saveAndFlush(any(Pedido.class));
     }
 
@@ -86,7 +86,7 @@ class PedidoServiceTest {
         PedidoRequest request = new PedidoRequest(List.of(new PedidoItemRequest(10L, 1)));
         
         io.github.danielmelejpinto.pedidoapi.model.ClaveIdempotencia claveMock = 
-            new io.github.danielmelejpinto.pedidoapi.model.ClaveIdempotencia(usuarioId, idempotencyKey, pedidoExistenteId);
+            new io.github.danielmelejpinto.pedidoapi.model.ClaveIdempotencia(usuarioId, idempotencyKey, pedidoExistenteId, null, "COMPLETADO");
             
         when(claveIdempotenciaRepository.findById(new io.github.danielmelejpinto.pedidoapi.model.ClaveIdempotenciaId(usuarioId, idempotencyKey)))
             .thenReturn(java.util.Optional.of(claveMock));
@@ -102,7 +102,7 @@ class PedidoServiceTest {
         // Assert
         assertEquals(pedidoExistenteId, pedidoRecuperado.getId());
         verify(productoClient, never()).obtenerProducto(any());
-        verify(inventarioClient, never()).reservarStock(any(), any());
+        verify(inventarioClient, never()).reservarStock(any(), any(), any());
         verify(pedidoRepository, never()).saveAndFlush(any());
     }
     
@@ -117,7 +117,7 @@ class PedidoServiceTest {
         
         ProductoDTO productoDTO = new ProductoDTO(10L, "Producto Test", new BigDecimal("50.00"), "ACTIVO");
         when(productoClient.obtenerProducto(10L)).thenReturn(productoDTO);
-        doNothing().when(inventarioClient).reservarStock(10L, 1);
+        doNothing().when(inventarioClient).reservarStock(10L, 1, null);
         
         // Para usuarioId2 NO se encontrará la clave, porque la clave se busca por (usuarioId, idempotencyKey)
         when(claveIdempotenciaRepository.findById(new io.github.danielmelejpinto.pedidoapi.model.ClaveIdempotenciaId(usuarioId2, idempotencyKey)))
@@ -137,7 +137,7 @@ class PedidoServiceTest {
         assertEquals(usuarioId2, pedidoCreado.getUsuarioId());
         
         verify(productoClient, times(1)).obtenerProducto(10L);
-        verify(inventarioClient, times(1)).reservarStock(10L, 1);
+        verify(inventarioClient, times(1)).reservarStock(10L, 1, null);
         verify(pedidoRepository, times(1)).saveAndFlush(any(Pedido.class));
         verify(claveIdempotenciaRepository, times(1)).saveAndFlush(any());
     }
@@ -154,7 +154,7 @@ class PedidoServiceTest {
         ProductoDTO productoDTO = new ProductoDTO(productoId, "Producto Test", precio, "ACTIVO");
 
         when(productoClient.obtenerProducto(productoId)).thenReturn(productoDTO);
-        doNothing().when(inventarioClient).reservarStock(productoId, cantidad);
+        doNothing().when(inventarioClient).reservarStock(productoId, cantidad, null);
         
         when(pedidoRepository.saveAndFlush(any(Pedido.class))).thenAnswer(invocation -> {
             Pedido p = invocation.getArgument(0);
@@ -171,7 +171,7 @@ class PedidoServiceTest {
         });
 
         // Verificamos que SE HAYA llamado a liberarStock para compensar
-        verify(inventarioClient, times(1)).liberarStock(productoId, cantidad);
+        verify(inventarioClient, times(1)).liberarStock(productoId, cantidad, null);
     }
 
     @Test
@@ -186,7 +186,7 @@ class PedidoServiceTest {
         ProductoDTO productoDTO = new ProductoDTO(productoId, "Producto Test", precio, "ACTIVO");
 
         when(productoClient.obtenerProducto(productoId)).thenReturn(productoDTO);
-        doNothing().when(inventarioClient).reservarStock(productoId, cantidad);
+        doNothing().when(inventarioClient).reservarStock(productoId, cantidad, null);
         
         // Simulamos un fallo en base de datos DESPUES de haber reservado
         when(pedidoRepository.saveAndFlush(any(Pedido.class))).thenThrow(new RuntimeException("Error BD simulado"));
@@ -197,7 +197,7 @@ class PedidoServiceTest {
         });
 
         // Verificamos que SE HAYA llamado a liberarStock para compensar la reserva huérfana
-        verify(inventarioClient, times(1)).liberarStock(productoId, cantidad);
+        verify(inventarioClient, times(1)).liberarStock(productoId, cantidad, null);
     }
 
     @Test
@@ -216,14 +216,14 @@ class PedidoServiceTest {
 
         when(pedidoRepository.findById(pedidoId)).thenReturn(java.util.Optional.of(pedido));
         when(pedidoRepository.cancelarSiConfirmado(pedidoId, usuarioId)).thenReturn(1);
-        doNothing().when(inventarioClient).liberarStock(10L, 2);
+        doNothing().when(inventarioClient).liberarStock(10L, 2, 1L);
 
         // Act
         Pedido cancelado = pedidoService.cancelarPedido(usuarioId, pedidoId);
 
         // Assert
         assertEquals(EstadoPedido.CANCELADO, cancelado.getEstado());
-        verify(inventarioClient, times(1)).liberarStock(10L, 2);
+        verify(inventarioClient, times(1)).liberarStock(10L, 2, 1L);
         verify(pedidoRepository, times(1)).cancelarSiConfirmado(pedidoId, usuarioId);
         verify(pedidoRepository, org.mockito.Mockito.never()).save(any(Pedido.class));
     }
@@ -275,6 +275,6 @@ class PedidoServiceTest {
         assertThrows(io.github.danielmelejpinto.pedidoapi.exception.EstadoPedidoInvalidoException.class,
             () -> pedidoService.cancelarPedido(1L, 1L));
         verify(inventarioClient, org.mockito.Mockito.never())
-            .liberarStock(org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.anyInt());
+            .liberarStock(any(), any(), any());
     }
 }

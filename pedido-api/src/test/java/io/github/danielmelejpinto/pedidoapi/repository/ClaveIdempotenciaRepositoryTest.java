@@ -41,11 +41,11 @@ public class ClaveIdempotenciaRepositoryTest {
         String claveUUID = "clave-compartida";
 
         // Act - Guardamos para usuario 1
-        ClaveIdempotencia clave1 = new ClaveIdempotencia(1L, claveUUID, pedido1.getId());
+        ClaveIdempotencia clave1 = new ClaveIdempotencia(1L, claveUUID, pedido1.getId(), null, "COMPLETADO");
         claveIdempotenciaRepository.saveAndFlush(clave1);
 
         // Act - Guardamos misma clave pero para usuario 2
-        ClaveIdempotencia clave2 = new ClaveIdempotencia(2L, claveUUID, pedido2.getId());
+        ClaveIdempotencia clave2 = new ClaveIdempotencia(2L, claveUUID, pedido2.getId(), null, "COMPLETADO");
         claveIdempotenciaRepository.saveAndFlush(clave2);
 
         // Assert
