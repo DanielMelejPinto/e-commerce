@@ -13,13 +13,12 @@ Gestiona las existencias y reservas de stock por producto. Es un servicio **inte
 ## Stack tecnológico
 
 - **Java 21** y **Spring Boot 4.1.1** (Web MVC, Data JPA, Validation, Actuator)
-- **H2** en memoria como base de ejecución (ver [Limitaciones conocidas](#limitaciones-conocidas))
+- **PostgreSQL 17** (perfil `docker`) y **H2** en memoria (desarrollo y pruebas)
+- **Flyway** (migraciones de base de datos)
 - **springdoc-openapi** (Swagger UI)
 - **JUnit 5 + Mockito + MockMvc**
 - **Testcontainers + PostgreSQL 17** (pruebas de integración)
 - **Maven** vía `mvnw`
-
-> Flyway y el driver de PostgreSQL están en el `pom.xml` como preparación para migrar a PostgreSQL, pero hoy Flyway está desactivado (`spring.flyway.enabled=false`) y no hay scripts de migración.
 
 ## Requisitos
 
@@ -138,12 +137,10 @@ src/test/resources/
 
 ## Limitaciones conocidas
 
-- **Sin autenticación ni autorización.** Cualquiera con acceso al puerto 8081 puede agregar, reservar, liberar o borrar stock; no debería exponerse fuera de la red interna.
-- **Datos volátiles:** solo usa H2 en memoria. Si `producto-api` reinicia su base y reutiliza ids, `POST` devolverá el inventario antiguo con su stock en lugar de uno nuevo.
+- **Autorización simplificada:** Las validaciones de rol aplican a operaciones críticas (ej. agregar stock requiere `ADMIN`), pero algunos endpoints de solo lectura podrían requerir afinamiento.
 - **Reservas sin identificador:** no existe la reserva como entidad; no se puede confirmar tras un pago ni caducar. Reintentar `reservar` tras un timeout **reserva dos veces**.
-- **Conflictos de concurrencia sin reintento interno:** dos operaciones simultáneas sobre el mismo inventario pueden dar `409` aunque haya stock; el cliente debe reintentar.
+- **Conflictos de concurrencia:** dos operaciones simultáneas sobre el mismo inventario pueden dar `409` aunque haya stock; el cliente (o Kafka) debe reintentar.
 - **Eliminación insegura:** `DELETE` borra el inventario aunque tenga reservas activas.
-- **Sin migraciones:** el esquema lo genera Hibernate (`ddl-auto=update`); Flyway está preparado pero desactivado.
 
 ## Autor
 
