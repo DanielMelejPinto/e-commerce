@@ -102,15 +102,4 @@ public class OutboxProcessor {
             }
         }
     }
-
-    public void reintentarEventosFallidos() {
-        List<OutboxEvent> errores = eventRepository.findPendingEvents(EstadoEvento.ERROR, LocalDateTime.now(), org.springframework.data.domain.PageRequest.of(0, 100));
-        for (OutboxEvent event : errores) {
-            event.setEstado(EstadoEvento.PENDIENTE);
-            event.setIntentos(0);
-            event.setProximoReintento(null);
-            eventRepository.save(event);
-            log.info("Evento fallido {} marcado para reintento manual", event.getId());
-        }
-    }
 }

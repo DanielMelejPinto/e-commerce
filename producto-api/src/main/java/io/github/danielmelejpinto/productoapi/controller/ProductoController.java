@@ -70,14 +70,6 @@ public class ProductoController {
         return ResponseEntity.ok(new PagedModel<>(service.obtenerTodosAdmin(nombre, pageable)));
     }
 
-    @PostMapping("/outbox/reintentar")
-    @Operation(summary = "Reintentar manualmente eventos fallidos")
-    public ResponseEntity<Void> reintentarEventosFallidos(
-        @org.springframework.beans.factory.annotation.Autowired io.github.danielmelejpinto.productoapi.service.OutboxProcessor processor) {
-        processor.reintentarEventosFallidos();
-        return ResponseEntity.ok().build();
-    }
-
     @GetMapping("/{id}")
     @Operation(summary = "Obtener un producto por id")
     @ApiResponse(responseCode = "200", description = "Producto encontrado")
