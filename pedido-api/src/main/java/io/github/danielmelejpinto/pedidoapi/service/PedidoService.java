@@ -37,7 +37,7 @@ public class PedidoService {
     public Pedido crearPedido(Long usuarioId, PedidoRequest request, String idempotencyKey) {
         if (idempotencyKey != null && !idempotencyKey.isBlank()) {
             java.util.Optional<io.github.danielmelejpinto.pedidoapi.model.ClaveIdempotencia> existente = 
-                claveIdempotenciaRepository.findById(idempotencyKey);
+                claveIdempotenciaRepository.findById(new io.github.danielmelejpinto.pedidoapi.model.ClaveIdempotenciaId(usuarioId, idempotencyKey));
             if (existente.isPresent()) {
                 log.info("Pedido idempotente recuperado para clave {}", idempotencyKey);
                 return pedidoRepository.findById(existente.get().getPedidoId())
@@ -78,7 +78,7 @@ public class PedidoService {
 
             if (idempotencyKey != null && !idempotencyKey.isBlank()) {
                 claveIdempotenciaRepository.saveAndFlush(
-                    new io.github.danielmelejpinto.pedidoapi.model.ClaveIdempotencia(idempotencyKey, pedidoGuardado.getId()));
+                    new io.github.danielmelejpinto.pedidoapi.model.ClaveIdempotencia(usuarioId, idempotencyKey, pedidoGuardado.getId()));
             }
         } catch (Exception e) {
             // ¡Algo falló! Activamos la transacción compensatoria (Saga)
