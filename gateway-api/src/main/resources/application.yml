@@ -53,4 +53,4 @@ management:
 
 logging:
   level:
-    org.hibernate.validator.internal.metadata.aggregated.CascadingMetaDataBuilder: ERROR
+    "[org.hibernate.validator.internal.metadata.aggregated.CascadingMetaDataBuilder]": ERROR
