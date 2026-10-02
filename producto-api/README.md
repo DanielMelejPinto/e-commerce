@@ -17,7 +17,7 @@ Microservicio REST de catálogo de productos, con **Java 21** y **Spring Boot 4.
 - Paginación y orden con lista blanca de campos.
 - Validación de entrada y manejo centralizado de errores en JSON (`@RestControllerAdvice`), sin exponer detalles internos.
 - Control de concurrencia optimista (`@Version`).
-- Integración con inventario mediante Outbox, con timeouts (2 s de conexión, 5 s de lectura) y hasta 5 reintentos por evento.
+- Integración con inventario mediante Outbox y **Apache Kafka**, garantizando la entrega de eventos con soporte para reintentos y tolerancia a fallos.
 - Tres perfiles: `dev` (H2 + datos de ejemplo + consola H2), `docker` (PostgreSQL) y `test` (H2 vacía).
 
 ## Requisitos

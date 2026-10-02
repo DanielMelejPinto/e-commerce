@@ -145,11 +145,10 @@ src/main/resources/
 
 ## Limitaciones conocidas
 
-- **Bases en memoria (H2):** los usuarios se pierden al reiniciar. El driver de PostgreSQL está en el `pom.xml`, pero no hay perfil ni configuración para usarlo.
 - **Clave JWT por defecto pública** y secreto compartido con `pedido-api` por configuración manual.
-- **Sin autorización por rol** en el backend, sin alta de administradores por API y sin `logout` ni revocación de tokens (un token es válido hasta que expira).
+- **Autorización simple:** sin alta de administradores por API y sin `logout` ni revocación de tokens (un token es válido hasta que expira).
 - **Sin refresh tokens** ni recuperación de contraseña.
-- Swagger UI y consola H2 públicos: pensado para desarrollo local.
+- Swagger UI público: pensado para desarrollo local.
 
 ## Autor
 
