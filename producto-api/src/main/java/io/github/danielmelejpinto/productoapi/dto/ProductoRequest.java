@@ -16,14 +16,17 @@ public record ProductoRequest(
         @Size(max = 150, message = "El nombre no puede superar 150 caracteres")
         String nombre,
 
-        @Schema(description = "Precio (hasta 10 enteros y 2 decimales)", example = "49.90")
+        @Schema(description = "Precio (hasta 17 enteros y 2 decimales)", example = "49.90")
         @NotNull(message = "El precio es obligatorio")
         @Positive(message = "El precio debe ser mayor a cero")
-        @Digits(integer = 10, fraction = 2, message = "El precio admite hasta 10 enteros y 2 decimales")
+        @Digits(integer = 17, fraction = 2, message = "El precio admite hasta 17 enteros y 2 decimales")
         BigDecimal precio,
+        
         @Schema(description = "Descripción detallada del producto", example = "Teclado mecánico RGB")
+        @Size(max = 1000, message = "La descripción no puede superar 1000 caracteres")
         String descripcion,
 
         @Schema(description = "URL de la imagen del producto", example = "https://ejemplo.com/imagen.jpg")
+        @Size(max = 2000, message = "La URL de la imagen no puede superar 2000 caracteres")
         String imagenUrl) {
 }
