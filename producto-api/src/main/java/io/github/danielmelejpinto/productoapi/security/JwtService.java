@@ -22,19 +22,7 @@ public class JwtService {
         this.jwtExpirationMs = jwtExpirationMs;
     }
 
-    public String generarTokenSistema() {
-        Date ahora = new Date();
-        Date expiracion = new Date(ahora.getTime() + jwtExpirationMs);
 
-        return Jwts.builder()
-                .subject("sistema@interno")
-                .claim("userId", 0L)
-                .claim("rol", "SYSTEM")
-                .issuedAt(ahora)
-                .expiration(expiracion)
-                .signWith(secretKey)
-                .compact();
-    }
 
     public Long extraerUserId(String token) {
         return obtenerClaims(token).get("userId", Long.class);
