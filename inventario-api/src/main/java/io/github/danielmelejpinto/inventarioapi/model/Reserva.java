@@ -13,7 +13,7 @@ import jakarta.persistence.UniqueConstraint;
 
 @Entity
 @Table(name = "reserva", uniqueConstraints = {
-    @UniqueConstraint(columnNames = {"pedido_id", "producto_id"})
+    @UniqueConstraint(name = "reserva_pedido_producto_uk", columnNames = {"pedido_id", "producto_id"})
 })
 public class Reserva {
 
@@ -29,12 +29,12 @@ public class Reserva {
     private Long productoId;
 
     @Column(name = "cantidad", nullable = false)
-    private Integer cantidad;
+    private Long cantidad;
 
-    @Column(name = "fecha_reserva", nullable = false)
+    @Column(name = "fecha_reserva", nullable = false, columnDefinition = "TIMESTAMP(6)")
     private LocalDateTime fechaReserva;
 
-    @Column(name = "estado", nullable = false)
+    @Column(name = "estado", nullable = false, length = 20)
     private String estado = "ACTIVA";
 
     @PrePersist
@@ -47,7 +47,7 @@ public class Reserva {
     public Reserva(Long pedidoId, Long productoId, Integer cantidad) {
         this.pedidoId = pedidoId;
         this.productoId = productoId;
-        this.cantidad = cantidad;
+        this.cantidad = cantidad.longValue();
         this.estado = "ACTIVA";
     }
 
@@ -63,8 +63,8 @@ public class Reserva {
     public Long getProductoId() { return productoId; }
     public void setProductoId(Long productoId) { this.productoId = productoId; }
 
-    public Integer getCantidad() { return cantidad; }
-    public void setCantidad(Integer cantidad) { this.cantidad = cantidad; }
+    public Long getCantidad() { return cantidad; }
+    public void setCantidad(Long cantidad) { this.cantidad = cantidad; }
 
     public LocalDateTime getFechaReserva() { return fechaReserva; }
     public void setFechaReserva(LocalDateTime fechaReserva) { this.fechaReserva = fechaReserva; }
