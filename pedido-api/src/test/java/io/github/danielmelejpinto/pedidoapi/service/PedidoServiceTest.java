@@ -86,9 +86,10 @@ class PedidoServiceTest {
         PedidoRequest request = new PedidoRequest(List.of(new PedidoItemRequest(10L, 1)));
         
         io.github.danielmelejpinto.pedidoapi.model.ClaveIdempotencia claveMock = 
-            new io.github.danielmelejpinto.pedidoapi.model.ClaveIdempotencia(idempotencyKey, pedidoExistenteId);
+            new io.github.danielmelejpinto.pedidoapi.model.ClaveIdempotencia(usuarioId, idempotencyKey, pedidoExistenteId);
             
-        when(claveIdempotenciaRepository.findById(idempotencyKey)).thenReturn(java.util.Optional.of(claveMock));
+        when(claveIdempotenciaRepository.findById(new io.github.danielmelejpinto.pedidoapi.model.ClaveIdempotenciaId(usuarioId, idempotencyKey)))
+            .thenReturn(java.util.Optional.of(claveMock));
         
         Pedido pedidoExistente = new Pedido();
         pedidoExistente.setId(pedidoExistenteId);
@@ -103,6 +104,44 @@ class PedidoServiceTest {
         verify(productoClient, never()).obtenerProducto(any());
         verify(inventarioClient, never()).reservarStock(any(), any());
         verify(pedidoRepository, never()).saveAndFlush(any());
+    }
+    
+    @Test
+    void crearPedido_idempotenciaYaExistePeroParaOtroUsuario_creaNuevoPedido() {
+        // Arrange
+        String idempotencyKey = "test-uuid";
+        Long usuarioId1 = 1L; // El dueño original
+        Long usuarioId2 = 2L; // El nuevo atacante o reintento erróneo
+        Long pedidoIdExistente = 55L;
+        
+        PedidoItemRequest itemRequest = new PedidoItemRequest(10L, 1);
+        PedidoRequest request = new PedidoRequest(List.of(itemRequest));
+        
+        ProductoDTO productoDTO = new ProductoDTO(10L, "Producto Test", new BigDecimal("50.00"), "ACTIVO");
+        when(productoClient.obtenerProducto(10L)).thenReturn(productoDTO);
+        doNothing().when(inventarioClient).reservarStock(10L, 1);
+        
+        // Para usuarioId2 NO se encontrará la clave, porque la clave se busca por (usuarioId, idempotencyKey)
+        when(claveIdempotenciaRepository.findById(new io.github.danielmelejpinto.pedidoapi.model.ClaveIdempotenciaId(usuarioId2, idempotencyKey)))
+            .thenReturn(java.util.Optional.empty());
+            
+        when(pedidoRepository.saveAndFlush(any(Pedido.class))).thenAnswer(invocation -> {
+            Pedido p = invocation.getArgument(0);
+            p.setId(99L); // Nuevo pedido
+            return p;
+        });
+        
+        // Act
+        Pedido pedidoCreado = pedidoService.crearPedido(usuarioId2, request, idempotencyKey);
+        
+        // Assert
+        assertEquals(99L, pedidoCreado.getId());
+        assertEquals(usuarioId2, pedidoCreado.getUsuarioId());
+        
+        verify(productoClient, times(1)).obtenerProducto(10L);
+        verify(inventarioClient, times(1)).reservarStock(10L, 1);
+        verify(pedidoRepository, times(1)).saveAndFlush(any(Pedido.class));
+        verify(claveIdempotenciaRepository, times(1)).saveAndFlush(any());
     }
     
     @Test

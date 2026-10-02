@@ -5,7 +5,11 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "claves_idempotencia")
+@IdClass(ClaveIdempotenciaId.class)
 public class ClaveIdempotencia {
+
+    @Id
+    private Long usuarioId;
 
     @Id
     private String clave;
@@ -23,10 +27,14 @@ public class ClaveIdempotencia {
 
     public ClaveIdempotencia() {}
 
-    public ClaveIdempotencia(String clave, Long pedidoId) {
+    public ClaveIdempotencia(Long usuarioId, String clave, Long pedidoId) {
+        this.usuarioId = usuarioId;
         this.clave = clave;
         this.pedidoId = pedidoId;
     }
+
+    public Long getUsuarioId() { return usuarioId; }
+    public void setUsuarioId(Long usuarioId) { this.usuarioId = usuarioId; }
 
     public String getClave() { return clave; }
     public void setClave(String clave) { this.clave = clave; }
