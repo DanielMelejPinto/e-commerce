@@ -118,6 +118,14 @@ public class PedidoService {
                     "No se puede cancelar el pedido porque está en estado " + pedido.getEstado());
         }
 
+        // Transición atómica CONFIRMADO -> CANCELADO. Si otra cancelación ganó la carrera,
+        // no se cambia ninguna fila y no se toca el stock (evita liberarlo dos veces).
+        int filas = pedidoRepository.cancelarSiConfirmado(pedidoId, usuarioId);
+        if (filas == 0) {
+            throw new io.github.danielmelejpinto.pedidoapi.exception.EstadoPedidoInvalidoException(
+                    "No se puede cancelar el pedido porque ya no está en estado CONFIRMADO");
+        }
+
         // Liberar el stock reservado
         for (PedidoItem item : pedido.getItems()) {
             try {
@@ -131,7 +139,8 @@ public class PedidoService {
             }
         }
 
+        // El UPDATE ya dejó la fila en CANCELADO; se refleja en la entidad devuelta.
         pedido.setEstado(EstadoPedido.CANCELADO);
-        return pedidoRepository.save(pedido);
+        return pedido;
     }
 }

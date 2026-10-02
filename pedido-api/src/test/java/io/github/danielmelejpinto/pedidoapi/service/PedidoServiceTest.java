@@ -178,8 +178,8 @@ class PedidoServiceTest {
         pedido.addItem(item);
 
         when(pedidoRepository.findById(pedidoId)).thenReturn(java.util.Optional.of(pedido));
+        when(pedidoRepository.cancelarSiConfirmado(pedidoId, usuarioId)).thenReturn(1);
         doNothing().when(inventarioClient).liberarStock(10L, 2);
-        when(pedidoRepository.save(any(Pedido.class))).thenAnswer(i -> i.getArgument(0));
 
         // Act
         Pedido cancelado = pedidoService.cancelarPedido(usuarioId, pedidoId);
@@ -187,7 +187,8 @@ class PedidoServiceTest {
         // Assert
         assertEquals(EstadoPedido.CANCELADO, cancelado.getEstado());
         verify(inventarioClient, times(1)).liberarStock(10L, 2);
-        verify(pedidoRepository, times(1)).save(pedido);
+        verify(pedidoRepository, times(1)).cancelarSiConfirmado(pedidoId, usuarioId);
+        verify(pedidoRepository, org.mockito.Mockito.never()).save(any(Pedido.class));
     }
 
     @Test
@@ -215,5 +216,28 @@ class PedidoServiceTest {
         // Act & Assert
         assertThrows(io.github.danielmelejpinto.pedidoapi.exception.EstadoPedidoInvalidoException.class, 
             () -> pedidoService.cancelarPedido(1L, 1L));
+    }
+
+    @Test
+    void cancelarPedido_sinCambiarEstado_noLiberaStock() {
+        // Arrange: el pedido se ve CONFIRMADO al leerlo, pero otra cancelación
+        // ganó la carrera y el UPDATE condicional no cambia ninguna fila.
+        Pedido pedido = new Pedido();
+        pedido.setId(1L);
+        pedido.setUsuarioId(1L);
+        pedido.setEstado(EstadoPedido.CONFIRMADO);
+        io.github.danielmelejpinto.pedidoapi.model.PedidoItem item = new io.github.danielmelejpinto.pedidoapi.model.PedidoItem();
+        item.setProductoId(10L);
+        item.setCantidad(2);
+        pedido.addItem(item);
+
+        when(pedidoRepository.findById(1L)).thenReturn(java.util.Optional.of(pedido));
+        when(pedidoRepository.cancelarSiConfirmado(1L, 1L)).thenReturn(0);
+
+        // Act & Assert
+        assertThrows(io.github.danielmelejpinto.pedidoapi.exception.EstadoPedidoInvalidoException.class,
+            () -> pedidoService.cancelarPedido(1L, 1L));
+        verify(inventarioClient, org.mockito.Mockito.never())
+            .liberarStock(org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.anyInt());
     }
 }
