@@ -70,6 +70,17 @@ public class PedidoService {
                 // Anotamos que este item ya fue reservado exitosamente en el servicio externo
                 itemsReservados.add(item);
             }
+            
+            pedido.setTotal(total);
+            pedido.setEstado(EstadoPedido.CONFIRMADO);
+            Pedido pedidoGuardado = pedidoRepository.saveAndFlush(pedido);
+
+            if (idempotencyKey != null && !idempotencyKey.isBlank()) {
+                claveIdempotenciaRepository.saveAndFlush(
+                    new io.github.danielmelejpinto.pedidoapi.model.ClaveIdempotencia(idempotencyKey, pedidoGuardado.getId()));
+            }
+
+            return pedidoGuardado;
         } catch (Exception e) {
             // ¡Algo falló! Activamos la transacción compensatoria (Saga)
             for (PedidoItem itemReservado : itemsReservados) {
@@ -87,16 +98,7 @@ public class PedidoService {
             throw e;
         }
 
-        pedido.setTotal(total);
-        pedido.setEstado(EstadoPedido.CONFIRMADO);
-        Pedido pedidoGuardado = pedidoRepository.save(pedido);
 
-        if (idempotencyKey != null && !idempotencyKey.isBlank()) {
-            claveIdempotenciaRepository.save(
-                new io.github.danielmelejpinto.pedidoapi.model.ClaveIdempotencia(idempotencyKey, pedidoGuardado.getId()));
-        }
-
-        return pedidoGuardado;
     }
 
     public List<Pedido> obtenerPedidosPorUsuario(Long usuarioId) {
