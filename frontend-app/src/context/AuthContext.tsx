@@ -16,19 +16,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
     const token = localStorage.getItem('token');
     if (token) {
-      // Validate token and get profile
       usuarioService.obtenerPerfil()
         .then((userData) => {
-          setUser(userData);
+          if (isMounted) setUser(userData);
         })
         .catch(() => {
           localStorage.removeItem('token');
-          setUser(null);
+          if (isMounted) setUser(null);
         })
         .finally(() => {
-          setLoading(false);
+          if (isMounted) setLoading(false);
         });
     } else {
       setLoading(false);
@@ -40,6 +40,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     window.addEventListener('auth-expired', handleAuthExpired);
     return () => {
+      isMounted = false;
       window.removeEventListener('auth-expired', handleAuthExpired);
     };
   }, []);

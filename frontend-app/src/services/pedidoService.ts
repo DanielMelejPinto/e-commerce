@@ -1,44 +1,41 @@
 import api from '../api/axios';
-import type { Pedido } from '../types';
+import { Pedido, PedidoRequest } from '../types';
+import { v4 as uuidv4 } from 'uuid';
 
-export interface PedidoItemRequest {
-  productoId: number;
-  cantidad: number;
-}
-
-export interface PedidoRequest {
-  items: PedidoItemRequest[];
+function generateHash(items: any) {
+  return JSON.stringify(items);
 }
 
 export const pedidoService = {
-  crearPedido: async (data: PedidoRequest): Promise<Pedido> => {
-    const cartHash = JSON.stringify(data);
-    let storedState = localStorage.getItem('checkout_state');
-    let idempotencyKey = crypto.randomUUID();
-
+  crearPedido: async (pedidoReq: PedidoRequest): Promise<Pedido> => {
+    let idempotencyKey = '';
+    const cartHash = generateHash(pedidoReq.items);
+    
+    // Check if we have an ongoing checkout state
+    const storedState = localStorage.getItem('checkout_state');
     if (storedState) {
       try {
         const parsed = JSON.parse(storedState);
         if (parsed.cartHash === cartHash && parsed.idempotencyKey) {
           idempotencyKey = parsed.idempotencyKey;
-        } else {
-          // If cart changed, start a new logical attempt
-          localStorage.setItem('checkout_state', JSON.stringify({ cartHash, idempotencyKey }));
         }
-      } catch (e) {
-        localStorage.setItem('checkout_state', JSON.stringify({ cartHash, idempotencyKey }));
+      } catch {
+        // ignore parsing error
       }
-    } else {
+    }
+    
+    if (!idempotencyKey) {
+      idempotencyKey = uuidv4();
       localStorage.setItem('checkout_state', JSON.stringify({ cartHash, idempotencyKey }));
     }
 
     try {
-      const response = await api.post('/api/pedidos', data, {
+      const response = await api.post('/api/pedidos', pedidoReq, {
         headers: {
           'Idempotency-Key': idempotencyKey
         }
       });
-      // Clear on success
+      // Clear checkout state on success
       localStorage.removeItem('checkout_state');
       return response.data;
     } catch (error) {
@@ -53,7 +50,7 @@ export const pedidoService = {
   },
 
   cancelarPedido: async (id: number): Promise<Pedido> => {
-    const response = await api.post(`/api/pedidos/${id}/cancelar`);
+    const response = await api.put(`/api/pedidos/${id}/cancelar`);
     return response.data;
   }
 };

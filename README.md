@@ -62,30 +62,21 @@ flowchart TD
 1. **`gateway-api` (Puerto 8000)**: API Gateway (Spring Cloud Gateway) que centraliza el enrutamiento, CORS y simplifica el acceso.
 2. **`usuario-api` (Puerto 8082)**: Gestión de identidades, roles (USER, ADMIN) y validación JWT.
 3. **`producto-api` (Puerto 8080)**: Catálogo de productos. 
-4. **`inventario-api` (Puerto 8081)**: Gestión de stock. Maneja concurrencia de reposición mediante **Optimistic Locking** (`@Version`).
-5. **`pedido-api` (Puerto 8083)**: Orquestador central de la **Saga Síncrona**.
+4. **`inventario-api` (Puerto 8081)**: Gestión de stock. Maneja concurrencia de reposición mediante **Optimistic Locking** (`@Version`). Implementa reservas duraderas e idempotentes.
+5. **`pedido-api` (Puerto 8083)**: Orquestador central de la **Saga Síncrona**. Controla idempotencia a nivel atómico para evitar cargos duplicados.
 
 ### Componentes de Soporte (Extras)
-- **Apache Kafka + Patrón Outbox (ShedLock)**: Propaga eventos de creación de productos de `producto-api` a `inventario-api` de forma resiliente para inicializar el stock.
+- **Apache Kafka + Patrón Outbox (ShedLock)**: Propaga eventos de creación de productos de `producto-api` a `inventario-api` de forma resiliente para inicializar el stock. Incluye un DLT (Dead Letter Topic) y reprocesamiento en lotes para tolerancia a fallos.
 - **Circuit Breaker (Resilience4j)**: Protege a `pedido-api` para reaccionar con Fail-Fast si un servicio dependiente está caído.
 - **Prometheus**: Recolección de métricas a través de Spring Boot Actuator.
 
-## Decisiones de Diseño y Límites Conocidos
+## Decisiones de Diseño
 
 1. **Carrera de Cancelación de Pedidos**: Al cancelar un pedido concurrentemente, existía el riesgo de liberar el stock múltiples veces si la lectura del estado `CONFIRMADO` y el guardado `CANCELADO` se solapaban. 
-   - *Por qué no `@Version`:* El `@Version` en `Pedido` evitaría sobreescribir el estado, pero la excepción `ObjectOptimisticLockingFailureException` saltaría *después* de que la llamada a la API externa de inventario ya hubiera liberado el stock.
-   - *Solución implementada:* Se utiliza un `UPDATE` condicional atómico (`UPDATE Pedido p SET p.estado = CANCELADO WHERE p.id = :id AND p.estado = CONFIRMADO`). Si devuelve 1 fila afectada, ganamos la carrera y liberamos stock; si devuelve 0, evitamos tocar el stock externo. Verificado con tests de concurrencia en H2 y PostgreSQL.
-2. **Saga Orquestada Síncrona**: `pedido-api` orquesta la transacción llamando a `inventario-api` por HTTP. Si algo falla (ej. base de datos de pedidos local), ejecuta la compensación liberando el stock previamente reservado. 
-   - *Límites:* Si la red cae justo antes de la compensación, quedarán reservas huérfanas en el inventario, ya que la compensación no tiene un mecanismo de reintento en background (Outbox) implementado actualmente.
-3. **Idempotencia con Scope por Usuario**: La API de pedidos previene cobros duplicados mediante `Idempotency-Key`. La clave primaria de la tabla de idempotencia es compuesta (`usuario_id, clave`), garantizando que un usuario malintencionado no pueda adivinar una clave en uso para interceptar pedidos ajenos.
-
-## Roadmap / Deuda Técnica (No implementado)
-
-- **Eliminar dependencias de Actuator/Prometheus**: Los `HEALTHCHECK` del Dockerfile acoplan el inicio de los contenedores a Actuator, pero podrían eliminarse para ahorrar memoria.
-- **Exposición innecesaria de Actuator**: `/actuator/**` está abierto y expone detalles sensibles del servidor.
-- **Rediseño Completo de la Saga**: Actualmente, la creación del pedido falla síncronamente. Un diseño más resiliente crearía el pedido en estado `PENDIENTE` primero, reservaría el stock asíncronamente y pasaría a `CONFIRMADO`.
-- **Falta de Dead Letter Queue (DLQ) en compensaciones**: Las fallas al compensar stock se loguean, pero no se encolan para revisión automática, pudiendo dejar stock congelado indefinidamente.
-- **Arranque en frío de Kafka / Retención de Eventos**: Un evento de outbox fallido deja el producto `PENDIENTE` permanentemente sin reintento manual; la conexión a Kafka puede demorar ~5m en registrar metadata.
+   - *Por qué no `@Version`:* El `@Version` en `Pedido` evitaría sobreescribir el estado, pero la excepción saldría *después* de que la llamada a la API externa de inventario ya hubiera liberado el stock.
+   - *Solución implementada:* Se utiliza un `UPDATE` condicional atómico (`UPDATE Pedido p SET p.estado = CANCELADO WHERE p.id = :id AND p.estado = CONFIRMADO`). El inventario usa identificadores únicos de reserva vinculados al ID del pedido para garantizar operaciones puramente idempotentes, resolviendo inconsistencias si una solicitud externa falla en su respuesta.
+2. **Idempotencia Atómica**: La API de pedidos previene cobros y efectos duplicados mediante `Idempotency-Key` atada atómicamente a la creación del pedido. La clave primaria de la tabla de idempotencia es compuesta (`usuario_id, clave`), bloqueando múltiples requests en curso que compartan clave antes de tocar dependencias externas.
+3. **Resiliencia con Kafka**: Para la asincronía eventual en la creación de stock base, se procesa Outbox en lotes y cualquier error del consumidor se envía a un DLT de Kafka (`DeadLetterPublishingRecoverer`), con endpoints administrativos para su reintento y persistencia nativa en disco con Docker Volumes.
 
 ## Cómo ejecutar el proyecto en local
 
