@@ -52,6 +52,7 @@ public class PedidoService {
         // Aquí guardaremos los productos que logramos reservar para liberarlos si algo
         // falla después
         java.util.List<PedidoItem> itemsReservados = new java.util.ArrayList<>();
+        Pedido pedidoGuardado = null;
 
         try {
             for (var itemReq : request.items()) {
@@ -73,14 +74,12 @@ public class PedidoService {
             
             pedido.setTotal(total);
             pedido.setEstado(EstadoPedido.CONFIRMADO);
-            Pedido pedidoGuardado = pedidoRepository.saveAndFlush(pedido);
+            pedidoGuardado = pedidoRepository.saveAndFlush(pedido);
 
             if (idempotencyKey != null && !idempotencyKey.isBlank()) {
                 claveIdempotenciaRepository.saveAndFlush(
                     new io.github.danielmelejpinto.pedidoapi.model.ClaveIdempotencia(idempotencyKey, pedidoGuardado.getId()));
             }
-
-            return pedidoGuardado;
         } catch (Exception e) {
             // ¡Algo falló! Activamos la transacción compensatoria (Saga)
             for (PedidoItem itemReservado : itemsReservados) {
@@ -97,8 +96,8 @@ public class PedidoService {
             // y para que el @Transactional aborte el guardado del Pedido en la BD local.
             throw e;
         }
-
-
+        
+        return pedidoGuardado;
     }
 
     public List<Pedido> obtenerPedidosPorUsuario(Long usuarioId) {

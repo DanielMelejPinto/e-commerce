@@ -102,9 +102,41 @@ class PedidoServiceTest {
         assertEquals(pedidoExistenteId, pedidoRecuperado.getId());
         verify(productoClient, never()).obtenerProducto(any());
         verify(inventarioClient, never()).reservarStock(any(), any());
-        verify(pedidoRepository, never()).save(any());
+        verify(pedidoRepository, never()).saveAndFlush(any());
     }
     
+    @Test
+    void crearPedido_fallaGuardadoClaveIdempotencia_liberaStockReservado() {
+        // Arrange
+        Long usuarioId = 1L;
+        Long productoId = 100L;
+        Integer cantidad = 2;
+        BigDecimal precio = new BigDecimal("50.00");
+
+        PedidoRequest request = new PedidoRequest(List.of(new PedidoItemRequest(productoId, cantidad)));
+        ProductoDTO productoDTO = new ProductoDTO(productoId, "Producto Test", precio, "ACTIVO");
+
+        when(productoClient.obtenerProducto(productoId)).thenReturn(productoDTO);
+        doNothing().when(inventarioClient).reservarStock(productoId, cantidad);
+        
+        when(pedidoRepository.saveAndFlush(any(Pedido.class))).thenAnswer(invocation -> {
+            Pedido p = invocation.getArgument(0);
+            p.setId(1L);
+            return p;
+        });
+
+        // Simulamos un fallo al guardar la clave de idempotencia
+        when(claveIdempotenciaRepository.saveAndFlush(any())).thenThrow(new RuntimeException("Error BD clave idempotencia simulado"));
+
+        // Act & Assert
+        assertThrows(RuntimeException.class, () -> {
+            pedidoService.crearPedido(usuarioId, request, "uuid-123");
+        });
+
+        // Verificamos que SE HAYA llamado a liberarStock para compensar
+        verify(inventarioClient, times(1)).liberarStock(productoId, cantidad);
+    }
+
     @Test
     void crearPedido_fallaGuardadoBD_liberaStockReservado() {
         // Arrange
