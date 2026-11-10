@@ -4,7 +4,7 @@ Microservicio que actúa como API Gateway del E-commerce. Enruta todas las petic
 
 ## Stack
 - Java 21
-- Spring Boot 3.2.x
+- Spring Boot 4.1.1
 - Spring Cloud Gateway
 
 ## Funcionalidades
